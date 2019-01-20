@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="pragma" content="no-cache"></meta>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"></meta>
+<meta name="viewport" content="width=device-width,initial-scale=.5"/>
+<script src="jquery-2.1.4.js"></script>
+<script src="scanimg.js"></script>
+<script src="gwdiff.js"></script>
+<script src="reptable.js"></script>
+   <script src="kage-engine/2d.js"></script>
+   <script src="kage-engine/buhin.js"></script>
+   <script src="kage-engine/curve.js"></script>
+   <script src="kage-engine/kage.js"></script>
+   <script src="kage-engine/kagecd.js"></script>
+   <script src="kage-engine/kagedf.js"></script>
+   <script src="kage-engine/polygon.js"></script>
+   <script src="kage-engine/polygons.js"></script>
+<script src="kage-engine.js"></script>
+<style>
+  .reg {  font-size:12px; font-family:monospace;
+  display:block;
+  width:80px;
+  border:solid gray 1px;
+  overflow:hidden;
+  
+  }
+  .ucs {
+  font-family:HanaMinA, HanaMinB;
+  font-size:20px;
+  }
+.scan { width:2000px;
+  position: relative; overflow:hidden;
+  height:100px; border:1px solid red;
+}
+
+.mbox {
+  display: flex;
+  flex-direction: row-reverse;
+  width:100%;
+  border:1px solid blue;
+}
+
+  .dkw {height: 18px; font-size:14px; text-align:right;}
+.koseki {height: 15px; white-space:nowrap; text-align:right;}
+.glyph {height: 110px; line-height:20px; padding:0; text-align:center; display:flex;
+  flex-wrap: wrap; }
+.cat {height: 15px;white-space:nowrap; font-size:12px;}
+.tgt {height: 17px;white-space:nowrap; }
+.check {height: 20px;white-space:nowrap;}
+.check select { -moz-appearance:none; height:20px; font-size:15px; border:1px solid #a00;}
+.check select option { -moz-appearance:none; font-size:15px; border:1px solid glay;}
+.check select:focus, #savepage:focus {background-color:red;}
+.check input { height:20px; font-size:15px; width:80px; border:1px solid #a00;}
+.newdef {width:52px; height:52px; font-size:10px; display:inline-block; background-color:green; overflow:hidden;}
+  .glyph span {width:50px; height:50px; border: solid gray 1px; padding:0; margin:0; display:block; line-height:20px;}
+  span.dglyph {border-color:red;}
+  span.retaken {border-color:blue;}
+
+.reg.retaken {background-color: #bdb;}
+  #previewbox {
+  width:200px; height:200px; border:1px solid gray;
+  position:relative;
+  background-color: #00f;
+}
+#origin {
+opacity:.5;
+}
+#preview{
+ mix-blend-mode: screen;
+}
+#editorbox {
+  display:inline-block;
+  width:auto;
+  background-color: #efe;
+  border: 1px solid gray;
+  position:sticky;
+  bottom:0;
+  left:0;
+}
+.closebox {
+  cursor:pointer;
+}
+</style>
+<title>差分確認</title>
+</head>
+
+<body>
+  検索窓<input id="search"> / 
+  <button id="rtkfrom">登録分</button>
+  <div id="result"></div>
+  <div>
+    <button id="savepage">savepage</button>
+    <textarea id="retakes" style="width:90%; height:90px;">??</textarea>
+    <button id="dumpref">refちぇっく</button>
+    <button id="replist">登録一覧</button>
+  </div>
+  <hr/>
+  <div id="editorbox">
+    <button class="closebox" style="float:right;">X</button>
+    <div id="info">None</div>
+    <div id="editor" style="display:flex">
+      <div>
+        <div style="" id="previewbox">
+          <div id="preview" style="width:200px; height:200px;" /></div>
+        <div id="origin" style="width:200px; height:200px; top:0; position:absolute; left:0;"></div>
+        
+      </div>
+      <label><input type="checkbox" id="showorigin">show origin</label>
+      <button id="draw">draw</button>
+      <button id="official">official</button>
+    </div>
+    <div>
+      <textarea id="defglyph" style="width:400px; height:200px;">
+      </textarea>
+      <div><span id="agenda"></span><button id="dump">↺</button></div>
+      <button id="replace">replace</button>
+      <button id="extract">extract</button>
+      <button id="undo">undo</button><br/>
+      <button id="save">save</button>as<input id="savename" />
+      <span style="display:none;" id="savedone">savedone</span>
+    </div>
+  </div>
+  <div id="undolist" style="word-break: break-all; width:600px; font-family:monospace; font-size:8px;"></div>
+</div>
+
+  <span>
+    <li>Alt + [X]/[Z] ... 次ページ/前ページ
+    <li>Alt + [;]/[:] ... 原典の行間を広げる/狭める
+    <li>Alt + [K]/[L] ... 原典を上下にスライド
+    <li>プルダウン選択中に[&gt;] ... その位置を行先頭にする
+    <li>プルダウン選択中に[&lt;] ... その位置を次行先頭にする
+    <li>プルダウン選択中に[*] ... その位置を次ページ先頭にする(未実装)
+    <li>プルダウン選択中に[M] ... "ki","i"選択時に石井明朝設計の適用を自動生成する(未実装) → またはdumpボタンかな?
+    <li>プルダウン選択中に[E] ... エディタの起動
+    <li>プルダウン選択中に[W] ... 石井明朝設計の自動作成
+    <li>プルダウン選択中に[D] ... kosekiとdkwの比較(未実装)
+    <li>プルダウン選択中に[G] ... glyphwikiにジャンプ(未実装)
+    <li>クッキー保存情報: page00=1,11,24,0,0,0,0,0,0,0,107;img00=40,0,225,0,410,0,...
+    <li>[W]が補助漢字に弱い,
+      [a][他]選択時はtext.blur()がほしい,
+      [E]でretaken展開,
+      改行が先づまりしてしまう件,
+  </span>
+  
+
+</body>
