@@ -102,6 +102,7 @@ local accesswiki = function(page, glyph, c, overwrite)
             local cmd = "echo " .. page .. " as otheralias >> ./reglog/undone ";
             execcmd(cmd);
             return
+         end 
       -- 両保持の場合(参照がいればvarを検索)
       elseif (overwrite == "branch")  then
          local ret = execcmd("grep '99:0:0:0:0:200:200:" .. page .. "$' ../gwdiff/cgi/gw1205 -r");
@@ -149,7 +150,6 @@ local accesswiki = function(page, glyph, c, overwrite)
       execcmd("sleep 1");
    end
 end
-
 local loginwiki = function()
 
    local cmd = "curl -w '\\n'"
@@ -181,6 +181,48 @@ local glyphname = function(code)
    end
    return name:sub(2)
 end
+
+
+local uk2d;
+local d2uk;
+local ucs2dkw = function(key)
+   if (uk2d ~= nil) then
+      return uk2d[key];
+   end
+   uk2d = {};
+   d2uk = {};
+   local fp = io.open("mji_00502_pickup.txt","r")
+   for gline in fp:lines() do
+      local line = gline:split("\t");
+      local dkw = line[1];
+      local koseki = line[2];
+      local ucs = line[3]:lower():gsub("^u%+", "u");
+      local ivs0 = (line[4] or ""):lower();
+      local ivs = (ivs0:match("^%x+_%x+$")) and "u" .. ivs0:gsub("_", "-u") or ucs;
+      local page = (function(dkw)
+        local page = dkw:trim():gsub("補", "h"):gsub("%'", "d");
+        local n = page:match("%d+")
+        return page:gsub(n, (page:find("^h") and "%04d" or "%05d"):format(n));
+      end)(dkw);
+
+      local alias = (function(koseki)
+         local glyph = koseki:match("^ksk%-(%d+)$");
+         return glyph and ("koseki-%s"):format(glyph) or nil;
+      end)(koseki);
+      uk2d[ucs] = uk2d[ucs] and uk2d[ucs] .. "," .. page or page;
+      if (ivs0:match("^u%+f[9a]") or ivs0:match("^u%+2f")) then uk2d[ivs0:gsub("u%+","u")] = page; end
+      
+      if (alias) then
+         uk2d[alias] = page;
+         d2uk[page] = {koseki=alias, c=ivs};
+      else
+         d2uk[page] = {koseki="jmj",c=ivs};
+      end
+   end
+   fp:close();
+   return uk2d[key];
+end
+
 
 --版1: dkw2ucs.txtのとおりに登録する
 local dkw2ucs = function(line)
@@ -358,7 +400,7 @@ end
 
 --版4: reg.datのとおりに登録する
 local crawl_table = function(e0, e1)
-   local fp = io.open("reg0107.dat","r")
+   local fp = io.open("reg.dat","r")
    --local fp = io.open("reglog/swaps","r")
    local i = 0;
    for line in fp:lines() do
@@ -407,18 +449,6 @@ if (false) then
    local glyph = "99:0:0:0:0:150:200:u72ad-01:0:0:0$99:0:0:60:0:199:95:u8278:0:0:0$99:0:0:65:80:192:190:u7530:0:0:0";
    accesswiki("dkw-11232", "[[u2283a]]");
 end
-
---[[
-
-【e漢字との連携】
-dkw-00001は、
-   http://ekanji.u-shimane.ac.jp/PrjEkanji/picture/dai/1-1000/dai000001.gif
-   dkw-00366dは、
-   http://ekanji.u-shimane.ac.jp/PrjEkanji/picture/dai/49001-50000/dai049965.gif
-   dkw-43256ddは、
-   http://ekanji.u-shimane.ac.jp/PrjEkanji/picture/dai/50001-51000/dai050476.gif
-とか。
-]]
 
 
 
