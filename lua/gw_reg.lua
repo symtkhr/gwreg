@@ -45,10 +45,10 @@ local getjson = function(page)
    if (c) then
       c = ucs2c(c);
    end
-
+   
    --print ("current = ",m,c);
    return m,c;
-end
+   end
 ]]
 local accesswiki = function(page, glyph, c, overwrite)
    if (false) then
@@ -72,7 +72,7 @@ local accesswiki = function(page, glyph, c, overwrite)
       cmd = cmd .. (" 'http://glyphwiki.org/wiki/%s?action=swap'"):format(page);
       cmd = cmd .. " -b gwcookie.txt"
       print(cmd);
-
+      
       if (arg[1] == "register") then
          execcmd(cmd);
          --execcmd("sleep 1");
@@ -80,13 +80,14 @@ local accesswiki = function(page, glyph, c, overwrite)
       return;
    end
 
-   
+   local summ = nil;
    -- check if there's registered glyph
    local data,c0 = getjson(page);
 
    -- 関連字だけ差し替える場合
-   if (overwrite == "refch") then
-      glyph = data   
+   if (overwrite == "kr") then
+      glyph = data;
+      summ = "関連字";
 
    -- 現在最新が実体である場合
    elseif (data and not data:match("^99:0:0:0:0:200:200:([^:]+)$")) then
@@ -94,7 +95,7 @@ local accesswiki = function(page, glyph, c, overwrite)
       -- 自分を参照しているやつらを拾い出す
       local ret = execcmd("grep '99:0:0:0:0:200:200:" .. page .. "$' ../gwdiff/cgi/gw1205/dump_newest_only.txt  -r");
       local k = ret:split("\n");
-
+      
       -- 上書きの場合(参照がいれば上書きしない:要swap)
       if (overwrite == "overwrite") then
          if (0 < #k) then
@@ -102,7 +103,7 @@ local accesswiki = function(page, glyph, c, overwrite)
             local cmd = "echo " .. page .. " as otheralias >> ./reglog/undone ";
             execcmd(cmd);
             return
-         end 
+         end
       -- 両保持の場合(参照がいればvarを検索)
       elseif (overwrite == "branch")  then
          local ret = execcmd("grep '99:0:0:0:0:200:200:" .. page .. "$' ../gwdiff/cgi/gw1205 -r");
@@ -116,7 +117,6 @@ local accesswiki = function(page, glyph, c, overwrite)
             cmd = cmd .. "' >> ./reglog/branch ";
             execcmd(cmd);
             return;
-
          end
          local page = k[1]:split(" ");
          execcmd("echo 'https://glyphwiki.org/wiki/".. page[1] .."?action=swap' >> ./reglog/swaps");
@@ -129,6 +129,9 @@ local accesswiki = function(page, glyph, c, overwrite)
       end
    end
 
+   if (glyph:match("^%[%[.+%]%]$")) then
+      summ = glyph;
+   end
 
    local timestump = os.time();
 
@@ -138,7 +141,7 @@ local accesswiki = function(page, glyph, c, overwrite)
    cmd = cmd .. (" -d 'edittime=%d' "):format(timestump);
    cmd = cmd .. (" -d 'textbox=%s'"):format(glyph);
    if (c)  then cmd = cmd .. (" -d 'related=%s'"):format(c); end
-   --cmd = cmd .. (" --data-urlencode 'summary=関連字'");
+   if (summ) then cmd = cmd .. (" --data-urlencode 'summary=%s'"):format(summ); end
    cmd = cmd .. (" --data-urlencode 'buttons=以上の記述を完全に理解し同意したうえで投稿する'");
    cmd = cmd .. " -b gwcookie.txt"
    cmd = cmd .. (" >> ./reglog/%s.dat"):format(page);
@@ -150,6 +153,7 @@ local accesswiki = function(page, glyph, c, overwrite)
       execcmd("sleep 1");
    end
 end
+
 local loginwiki = function()
 
    local cmd = "curl -w '\\n'"
@@ -400,7 +404,7 @@ end
 
 --版4: reg.datのとおりに登録する
 local crawl_table = function(e0, e1)
-   local fp = io.open("reg.dat","r")
+   local fp = io.open("reg0131b.dat","r")
    --local fp = io.open("reglog/swaps","r")
    local i = 0;
    for line in fp:lines() do

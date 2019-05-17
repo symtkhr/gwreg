@@ -1,8 +1,8 @@
 $(function() {
-    var regs = {};
-    var mj = [];
-    var tgts = {};
-    var hokans = {};
+    var regs = {};   // {dkw-%d: {retake: 登録予定データ, mt: "#"(mtnestが登録した場合)}}
+    var mj = [];     // {d:大漢和番号, k:戸籍統一, u:UCS}のテーブル
+    var tgts = {};   // {u%x(=UCS番号): 差替部首}
+    var hokans = {}; // {d:大漢和番号, s:画数}のテーブル
 
     $.ajaxSetup({ cache: false });
     var page_init = function() {
@@ -38,7 +38,7 @@ $(function() {
         }).sort(function(a, b) {
             return a.s - b.s;
         });
-        console.log(hokans);
+        //console.log(hokans);
     };
     
     var tgthandler = function(data) {
@@ -189,12 +189,21 @@ $(function() {
                   "max-width":"100%",
                   "height":"auto"});
 	return;
+        
+        /* 
+[refactoring案]
+1: 現状画像のnaturalwidthを1275pxに拡縮している.
+  naturalwidthのままscant.d.top とscant.d.step からいい感じの縮尺に自動調整できないか?
+2: scant.t で各行先頭番号を記録しているが、dash番号とか対応できてない.
+  むしろ各行の17字からの差分を記録して自動算出できないか(350<n における vacantのように)
+3: プルダウン編集時はキーアクションが要る仕様にしたい
+*/
         $img.load(function() {
             var width = $(this)[0].naturalWidth;
             var rate  = 1; //5 / 8;
             $(this).css(
                 {"width": width * rate,
-                 "top": parseInt($(this).css("top")) * width / 1275 * rate,
+                 "top": parseInt($(this).css("top")) * 1275 / width * rate,
                 });
         });
     };
@@ -290,24 +299,27 @@ $(function() {
             var $dkw = $(this).parent().siblings(".dkw");
             var dkw = $dkw.text();
             var $box = $(this).parents(".reg");
-            
+
+            // E押下でエディタの起動
             if (e.keyCode == "E".charCodeAt(0)) {
                 editor_init(dkw, regs[dkw] && regs[dkw].retake ? regs[dkw].retake[0] : null);
                 return;
             }
-	    if (e.keyCode == "V".charCodeAt(0)) {
-		    var fdkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
-            var n = scanimglist.findIndex(obj => dkw < fdkw(obj.t[0]));
-            n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
-            var i = scanimglist[n].t.findIndex(top => dkw < fdkw(top));
-            i = (i == -1) ? (scanimglist[n].t.length - 1) : (i - 1);
-            var $scan = $box.parent().prev(".scan");
-            console.log($scan, $scan.size());
-            if (!$scan.size()) $scan = $("<div>").insertBefore($box.parents(".mbox"));
-            console.log($scan);
-            draw_scanimg(n, i, $scan);
-		    return;
-	    }
+            // V押下で画像表示
+            if (e.keyCode == "V".charCodeAt(0)) {
+                var fdkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
+                var n = scanimglist.findIndex(obj => dkw < fdkw(obj.t[0]));
+                n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
+                var i = scanimglist[n].t.findIndex(top => dkw < fdkw(top));
+                i = (i == -1) ? (scanimglist[n].t.length - 1) : (i - 1);
+                var $scan = $box.parent().prev(".scan");
+                console.log($scan, $scan.size());
+                if (!$scan.size()) $scan = $("<div>").insertBefore($box.parents(".mbox"));
+                console.log($scan);
+                draw_scanimg(n, i, $scan);
+                return;
+            }
+            // W押下で石井自動差替
             if (e.keyCode == "W".charCodeAt(0)) {
                 $box.removeClass("saved");
                 var $glyph = $(this).parent().siblings(".glyph");
@@ -325,6 +337,12 @@ $(function() {
                 return;
             }
 
+            // G押下でGlyphwiki表示
+            if (e.keyCode == "G".charCodeAt(0)) {
+                window.open("https://glyphwiki.org/wiki/" + dkw);
+            }
+
+            // "<" ">"押下で改行位置変更
             if (e.keyCode != 188 && e.keyCode != 190) return; /* <> */
 
             var $mbox = $(this).parents(".mbox");
@@ -342,6 +360,7 @@ $(function() {
             if (e.keyCode == 188)
                 $mbox.nextAll(".mbox").eq(0).find("select").eq(0).focus();
         }).change(function() {
+            //プルダウンの値変更時に"saved"フラグクリア
             var v = $(this).val();
             var $box = $(this).parent().parent();
             $box.removeClass("saved");
@@ -360,6 +379,7 @@ $(function() {
             }
 
         }).blur(function() {
+            //プルダウンの値変更時にセーブ
             var v = $(this).val();
             var $box = $(this).parent().parent();
             var dkw = $box.find(".dkw").text();
@@ -524,6 +544,7 @@ $(function() {
 
         var cat_check = function(dkw, koseki, ucs)
         {
+           if (!gdef[dkw]) return "";
             var d0 = gdef[dkw].match(/^99:0:0:0:0:200:200:([^:]+)$/);
             var k0 = (gdef[koseki] || "").match(/^99:0:0:0:0:200:200:([^:]+)$/);
 
@@ -742,20 +763,20 @@ $(function() {
 	    Object.keys(regs).sort().filter(function(dkw) {
 	        if (!regs[dkw].retake) return;
 	        var retaken = regs[dkw].retake;
-            if (!retaken[0]) return;
-            if (retaken[0] == "_") return;
+                if (!retaken[0]) return;
+                if (retaken[0] == "_") return;
 	        if (retaken[1]) {
-                if (retaken[1].indexOf("#-:") == 0) return;
+                    if (retaken[1].indexOf("#-:") == 0) return;
 	            if (retaken[1].indexOf("#ho:") == 0) return;
 	            if (retaken[1].indexOf("#ref:") == 0) return;
-            }
+                }
 	        var m = mjfind(dkw);
             var u = (m.length) ? m[0].u : "";
 	        ret += [
 		        dkw + "[" + ucs2c(u || "") + "]",
 		        retaken[0],
 		        retaken[1],
-                (regs[dkw].mt) ? "overwrite" : "",
+                    (regs[dkw].mt) ? "overwrite" : "",
 	        ].join("\t") + "\n";
 	    });
 	    $("#retakes").val(ret);
