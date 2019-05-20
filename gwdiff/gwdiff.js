@@ -107,6 +107,8 @@ $(function() {
             });
             mj.push(ret);
         });
+        mj.sort((a,b) => { if (!a.d) a.d ="x"; if(!b.d) b.d = "x";
+                return a.d < b.d ? -1 : 1;});
     };
 
     var retakenhandler = function(data) {
@@ -163,30 +165,37 @@ $(function() {
 
     var draw_scanimg = function(n, i, $bar)
     {
-        var scant = scanimglist[n] || [];
+        var boxwidth = 500;
+        var scant = scanimglist1[n] || [];
         var top = 0;
         var src = "";
-        if (scant[i]) {
-             top = scant[i].top;
-             src = scant[i].src;
-            if (!isNaN(src)) src = scant[src].src;
+        var rate = 1;
+        if (scant["r"+i]) {
+             top = scant["r"+i].top;
+             src = scant["r"+i].src;
+             if (!isNaN(src)) src = scant["r"+src].src;
         } else if(scant.d) {
-            var step = scant.d.step || (320 < n && n <= 350 ? 481 : 185);
-            var offset = scant.d.top || (320 < n && n <= 350 ? 31 : 40);
-            top = i * step + offset;
+            // boxwidth : step = 1275 : 195 = 85 : 13
+            var aspect = (320 < n && n <= 350) ? (7 / 17) : (13 / 85);
+            rate = boxwidth / scant.d.step * aspect;
+            var offset = scant.d.top * rate;
+            top = i * boxwidth * aspect + offset;
             src = scant.d.src;
         } else {
             return;
         }
+        console.log(rate);
         //console.log(top,n,i,scant);
         $bar.addClass("scan");
-        $bar.css({"position": "relative", "overflow":"hidden", "width":"1275px",
-                  "height":"100px", "border":"1px solid red"});
+        $bar.css({"position": "relative", "overflow":"hidden",
+                  "width":boxwidth + "px",
+                  "height": (boxwidth / 1275 * 100) + "px",
+                  "border":"1px solid red"});
         var $img = $("<img>").attr("src", "scanimg/" + src).appendTo($bar);
-        $img.css({"top": -top + "px", "left":"0px",
+        $img.css({"top": -top + "px",
+                  "left":(-scant.d.left * rate) + "px",
                   "position":"absolute",
-                  "width":"auto",
-                  "max-width":"100%",
+                  "width": (scant.d.width * rate) + "px",
                   "height":"auto"});
 	return;
         
@@ -226,71 +235,35 @@ $(function() {
         var n = (1 * $pagebox.attr("id").split("p").pop());
 
         // 先頭行リスト
-        var brs = function(n) {
-            var ret = [];
-            if (355 < n) return [];
-            if (350 < n) {
-                var vacant = [
-                    4,1,1,1,1,0,0,1,0,1,
-                    0,0,0,0,1,0,0,0,1,0,
-                    0,0,1,0,0,0,1,0,1,0,
-                    0,0,1,0,0,0,1,0,0,1,
-                    0,1,0,1,1,0,1,3,4,0];
-                //ret.push(0);
-                var nth = 0;
-                for (var i = 351; i < n + 1; i++) {
-                    for (var j = 0; j < 10; j++) {
-                        var line = (i - 351) * 10 + j;
-                        if (i == n) ret.push(nth);
-                        console.log(line,vacant[line]);
-                        nth += 17 - vacant[line];
-                    }
-                }
-                ret.push(nth);
-                return ret;
+        var nth = function(n) {
+            if (355 < n) return 0;
+            var nth = 0;
+            for (var i = (350 < n ? 351 : 0); i < n; i++) {
+                nth += scanimglist1[i].v.reduce((sum, v) => sum + 17 - v, 0);
             }
-            if (n < 320) {
-                var lines = 10;
-                var step = 17;
-            }
-            else { //(350-49961:321-48903)
-                var lines = 4;
-                var step = parseInt((49961-48903) / (350 - 321) / lines);
-            };
-            for (var i = 0; i < lines; i++) ret.push(scanimglist[n].t[i] || 0);
-            if (scanimglist[n + 1] && scanimglist[n + 1].t)
-                ret.push(scanimglist[n + 1].t[0] || 0);
-
-            // scanimglistに記録がなければ、とりあえず1行step字と仮定して先頭行を推定する
-            if (!ret[0]) ret[0] = scanimglist[n - 1].t[lines - 1];
-            if (!ret[0]) ret[0] = (n < 320) ? (n * step * lines) : 48903 + (n - 321) * step * lines;
-            for (var i = 0; i < lines + 1; i++) {
-                if (ret[i]) continue;
-                ret[i] = (ret[i - 1] == -1) ? -1 : ret[i - 1] + step;
-            }
-            return ret;
+            return nth;
         }(n);
         console.log(brs);
 
         // 各行に箱を並べていく
         $pagebox.find(".reg").hide();
-        $pagebox.find(".mbox").each(function(i) {
-            var end = "dkw-" + ("0000" + brs[i + 1]).substr(-5);
-            if (n <= 350 && (!brs[i] || brs[i] == -1 || brs[i + 1] == -1)) return;
-            for (var j = 0; j < 23; j++) {
-                var dkw = (n <= 350) ?
-                    "dkw-" + ("0000" + (brs[i] + j)).substr(-5) :
-                    (hokans[brs[i] + j] || {d:""}) .d;
-                if (n <= 350 && !(dkw < end)) break;
-                if (350 < n && brs[i + 1] < j + brs[i]) break;
-                draw_box(dkw, $(this));
-                if (dashlist.indexOf(dkw + "d") == -1) continue;
-                draw_box(dkw + "d", $(this));
-                if (dashlist.indexOf(dkw + "dd") == -1) continue;
-                draw_box(dkw + "dd", $(this));
+        scanimglist1[n].v.forEach(function(vacant, i) {
+            $mbox = $pagebox.find(".mbox").eq(i);
+            var boxlen = 17 - vacant;
+            for (var j = 0; j < boxlen; j++) {
+                var dkw = ((n <= 350 ? mj[nth] : hokans[nth]) || {d:""}) .d;
+                draw_box(dkw, $mbox);
+                nth++;
             }
         });
-
+/*
+        //console.log(boxes, JSON.stringify(scanimglist[n]));
+        $pagebox.find(".mbox").each(function(i) {
+                scanimglist[i]) return;
+                dkws[i].forEach(function(dkw) {
+                        draw_box(dkw, $(this));
+                    });
+        }); */
         boxevents($pagebox);
     };
 
@@ -691,37 +664,43 @@ $(function() {
         if (isNaN(n)) n = 0;
         if (0 < n && e.keyCode == "Z".charCodeAt(0)) draw(n - 1);
         if (e.keyCode == "X".charCodeAt(0)) draw(n + 1);
-        if (e.keyCode == ";".charCodeAt(0))
+        if (e.keyCode == "9".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
-                var rtop = -1 * $img.css("top").split("px").shift() - (i);
-                $img.css("top", -rtop + "px");
+                console.log($img.css("width"));
+                var width = $img.css("width").split("px").shift() * 1 + 5;
+                $img.css("width", width + "px");
+                //var rtop = -1 * $img.css("top").split("px").shift() - (i);
+                //$img.css("top", -rtop + "px");
             });
-        if (e.keyCode == ":".charCodeAt(0))
+        if (e.keyCode == "0".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
-                var rtop = -1 * $img.css("top").split("px").shift() + (i);
-                $img.css("top", -rtop + "px");
+                var width = $img.css("width").split("px").shift() - 5;
+                console.log(width);
+                $img.css("width", width + "px");
+                //var rtop = -1 * $img.css("top").split("px").shift() + (i);
+                //$img.css("top", -rtop + "px");
             });
-        if (e.keyCode == "L".charCodeAt(0))
+        if (e.keyCode == "6".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("top").split("px").shift() - 5;
                 $img.css("top", -rtop + "px");
             });
-        if (e.keyCode == "K".charCodeAt(0))
+        if (e.keyCode == "5".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("top").split("px").shift() + 5;
                 $img.css("top", -rtop + "px");
             });
-        if (e.keyCode == "I".charCodeAt(0))
+        if (e.keyCode == "8".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("left").split("px").shift() - 5;
                 $img.css("left", -rtop + "px");
             });
-        if (e.keyCode == "O".charCodeAt(0))
+        if (e.keyCode == "7".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("left").split("px").shift() + 5;

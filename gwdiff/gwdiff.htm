@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=.5"/>
 <script src="jquery-2.1.4.js"></script>
 <script src="scanimg.js"></script>
+<script src="scanimgv.js"></script>
 <script src="gwdiff.js"></script>
 <script src="reptable.js"></script>
    <script src="kage-engine/2d.js"></script>
@@ -125,17 +126,13 @@ opacity:.5;
 
   <span>
     <li>Alt + [X]/[Z] ... 次ページ/前ページ
-    <li>Alt + [;]/[:] ... 原典の行間を広げる/狭める
-    <li>Alt + [K]/[L] ... 原典を上下にスライド
-    <li>プルダウン選択中に[&gt;] ... その位置を行先頭にする
-    <li>プルダウン選択中に[&lt;] ... その位置を次行先頭にする
-    <li>プルダウン選択中に[*] ... その位置を次ページ先頭にする(未実装)
+    <li>Alt + [5]/[6]/[7]/[8]/[9]/[0] ... 原典を上下左右拡縮
+    <li>Alt + [R] ... 再描画(p.retaken.datの反映)
     <li>プルダウン選択中に[M] ... "ki","i"選択時に石井明朝設計の適用を自動生成する(未実装) → またはdumpボタンかな?
     <li>プルダウン選択中に[E] ... エディタの起動
     <li>プルダウン選択中に[W] ... 石井明朝設計の自動作成
     <li>プルダウン選択中に[D] ... kosekiとdkwの比較(未実装)
-    <li>プルダウン選択中に[G] ... glyphwikiにジャンプ(未実装)
-    <li>クッキー保存情報: page00=1,11,24,0,0,0,0,0,0,0,107;img00=40,0,225,0,410,0,...
+    <li>プルダウン選択中に[G] ... glyphwikiにジャンプ
     <li>[W]が補助漢字に弱い,
       [a][他]選択時はtext.blur()がほしい,
       [E]でretaken展開,
