@@ -9,7 +9,7 @@ $(function() {
         var load = 0;
         // 読込ファイルの一覧
         var loadfiles = [
-            {name:"p.def.dat", handler:defhandler},
+        //  {name:"p.def.dat", handler:defhandler},
             {name:"mji_00502_pickup.txt", handler:mjhandler},
             {name:"kdbonly.htm.txt", handler:kdbhandler},
             {name:"p.ishiitgt.txt", handler:tgthandler},
@@ -165,7 +165,7 @@ $(function() {
 
     var draw_scanimg = function(n, i, $bar)
     {
-        var boxwidth = 500;
+        var BOXWIDTH = 1275;
         var scant = scanimglist1[n] || [];
         var top = 0;
         var src = "";
@@ -175,12 +175,14 @@ $(function() {
              src = scant["r"+i].src;
              if (!isNaN(src)) src = scant["r"+src].src;
         } else if(scant.d) {
-            // boxwidth : step = 1275 : 195 = 85 : 13
+            // BOXWIDTH : step = 1275 : 195 = 85 : 13
             var aspect = (320 < n && n <= 350) ? (7 / 17) : (13 / 85);
-            rate = boxwidth / scant.d.step * aspect;
+            var BOXHEIGHT = BOXWIDTH * aspect;
+            rate = BOXHEIGHT / scant.d.step;
             var offset = scant.d.top * rate;
-            top = i * boxwidth * aspect + offset;
+            top = i * BOXHEIGHT + offset;
             src = scant.d.src;
+            $("#scanfile").text(src);
         } else {
             return;
         }
@@ -188,8 +190,8 @@ $(function() {
         //console.log(top,n,i,scant);
         $bar.addClass("scan");
         $bar.css({"position": "relative", "overflow":"hidden",
-                  "width":boxwidth + "px",
-                  "height": (boxwidth / 1275 * 100) + "px",
+                  "width":BOXWIDTH + "px",
+                  "height": (BOXWIDTH * 4 / 51) + "px",
                   "border":"1px solid red"});
         var $img = $("<img>").attr("src", "scanimg/" + src).appendTo($bar);
         $img.css({"top": -top + "px",
@@ -207,14 +209,6 @@ $(function() {
   むしろ各行の17字からの差分を記録して自動算出できないか(350<n における vacantのように)
 3: プルダウン編集時はキーアクションが要る仕様にしたい
 */
-        $img.load(function() {
-            var width = $(this)[0].naturalWidth;
-            var rate  = 1; //5 / 8;
-            $(this).css(
-                {"width": width * rate,
-                 "top": parseInt($(this).css("top")) * 1275 / width * rate,
-                });
-        });
     };
 
     var redraw = function(n)
@@ -243,7 +237,6 @@ $(function() {
             }
             return nth;
         }(n);
-        console.log(brs);
 
         // 各行に箱を並べていく
         $pagebox.find(".reg").hide();
@@ -276,20 +269,6 @@ $(function() {
             // E押下でエディタの起動
             if (e.keyCode == "E".charCodeAt(0)) {
                 editor_init(dkw, regs[dkw] && regs[dkw].retake ? regs[dkw].retake[0] : null);
-                return;
-            }
-            // V押下で画像表示
-            if (e.keyCode == "V".charCodeAt(0)) {
-                var fdkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
-                var n = scanimglist.findIndex(obj => dkw < fdkw(obj.t[0]));
-                n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
-                var i = scanimglist[n].t.findIndex(top => dkw < fdkw(top));
-                i = (i == -1) ? (scanimglist[n].t.length - 1) : (i - 1);
-                var $scan = $box.parent().prev(".scan");
-                console.log($scan, $scan.size());
-                if (!$scan.size()) $scan = $("<div>").insertBefore($box.parents(".mbox"));
-                console.log($scan);
-                draw_scanimg(n, i, $scan);
                 return;
             }
             // W押下で石井自動差替
@@ -413,7 +392,7 @@ $(function() {
                       //$("#savedone").show();
                   });
 
-        });
+            }).prop("disabled", true);
 
 
         $pagebox.find(".check select").change(function() {
@@ -432,7 +411,40 @@ $(function() {
             var ref = $(this).text().split(":").shift();
             window.open("https://glyphwiki.org/wiki/" + m[0]);
             //window.open("./gw_edit.htm#" + m[0]);
-        });
+            }).keydown(function(e){
+                    scanmove(e);
+                    // V押下で画像表示
+        if (e.keyCode == "V".charCodeAt(0)) {
+            var fdkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
+            var $dkw = $(this);
+            var $box = $(this).parents(".reg");
+            //$("#search").val($(this).text());
+            var dkw = $dkw.text();
+            var n = scanimglist.findIndex(obj => dkw < fdkw(obj.t[0]));
+            n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
+            var i = scanimglist[n].t.findIndex(top => dkw < fdkw(top));
+            i = (i == -1) ? (scanimglist[n].t.length - 1) : (i - 1);
+            var $scan = $box.parent().prev(".scan");
+            $("#search").val($scan.size());
+            console.log($scan, $scan.size());
+            if (!$scan.size()) $scan = $("<div>").insertBefore($box.parents(".mbox"));
+            console.log($scan);
+            draw_scanimg(n, i, $scan);
+            return;
+        }
+
+                   // Q押下で画pulldown enable
+                    if (e.keyCode != "Q".charCodeAt(0)) return;
+                    $(this).parent().find(".check select").prop("disabled", false).focus();
+                }).each(function(){
+                    var m = $(this).text().match(/dkw\-[0-9dh]+/)
+                        //window.open("https://glyphwiki.org/wiki/" + m[0]);
+                        var ref = $(this).text().split(":").shift();
+                    $(this).html(
+                                 '<a target="_blank" href="https://glyphwiki.org/wiki/' + m[0] + '">' + $(this).text() + "</a>");
+                    //$("a").text($(this).text()).attr("href", "https://glyphwiki.org/wiki/" + m[0]).appendTo(this);
+                }
+);
 
     };
 
@@ -654,11 +666,21 @@ $(function() {
 	    }
     });
 
-    // キーショートカット
     $("body").keydown(function(e){
         //console.log(e);
         if (!e.altKey) return;
+        var n = location.href.split("#").pop();
+        n = parseInt(n);
+        if (isNaN(n)) n = 0;
+        if (0 < n && e.keyCode == "Z".charCodeAt(0)) draw(n - 1);
+        if (e.keyCode == "X".charCodeAt(0)) draw(n + 1);
+    });
+    // キーショートカット
+    var scanmove = function(e){
+        //console.log(e);
+        //if (!e.altKey) return;
         //if ((e.keyCode != 0x5a) &&(e.keyCode != ("X").charCodeAt(0))) return;
+        if (e.altKey) return;
         var n = location.href.split("#").pop();
         n = parseInt(n);
         if (isNaN(n)) n = 0;
@@ -707,8 +729,9 @@ $(function() {
                 $img.css("left", -rtop + "px");
             });
         if (e.keyCode == "R".charCodeAt(0)) redraw(n);
+        
+    };
 
-    });
     $("#dumpref").click(function() {
 	var ret = "";
 	    Object.keys(regs).filter(function(dkw) {
