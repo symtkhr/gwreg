@@ -100,7 +100,7 @@ local accesswiki = function(page, glyph, c, overwrite)
       if (overwrite == "overwrite") then
          if (0 < #k) then
             -- todo: swap
-            local cmd = "echo " .. page .. " as otheralias >> ./reglog/undone ";
+            local cmd = "echo " .. page .. " as otheralias >> ./reglog/0undone ";
             execcmd(cmd);
             return
          end
@@ -114,16 +114,16 @@ local accesswiki = function(page, glyph, c, overwrite)
 
             local cmd = "echo '" .. page .. " as nobranch ";
             cmd = cmd .. ("(u%x-var-%03d)"):format(utf8.codepoint(c), #n + 1);
-            cmd = cmd .. "' >> ./reglog/branch ";
+            cmd = cmd .. "' >> ./reglog/0undone ";
             execcmd(cmd);
             return;
          end
          local page = k[1]:split(" ");
-         execcmd("echo 'https://glyphwiki.org/wiki/".. page[1] .."?action=swap' >> ./reglog/swaps");
+         execcmd("echo 'https://glyphwiki.org/wiki/".. page[1] .."?action=swap' >> ./reglog/0undone");
 
          return;
       else
-         local cmd = "echo " .. page .. " as original >> ./reglog/undone ";
+         local cmd = "echo " .. page .. " as original >> ./reglog/0undone ";
          execcmd(cmd);
          return
       end
@@ -371,9 +371,11 @@ local pickups = function(buff)
    local c = (dkws[2] or "〓"):split("]")[1] or "〓";
    local glyph = line[2];
    local cat = line[3];
-   local ow = line[4] or ""
+   local ow = line[4] or "overwrite"
    
-   if (dkw:match("^dkw%-")==nil and dkw:match("^u%x") == nil 
+   
+   if (dkw:match("^dkw%-")==nil and dkw:match("^u%x") == nil
+         and dkw:match("^cdp%-") == nil 
           and dkw:match("^nyukan%-")==nil and dkw:match("^toki%-") == nil
           and dkw:match("^gt%-")==nil and dkw:match("^jmj%-") == nil
    ) then
@@ -394,7 +396,7 @@ local pickups = function(buff)
    end
 
    if (cat:match("^#[hr%-]") or glyph == "_" or glyph == "[[]]") then
-      local cmd = "echo " .. dkw .. " as undef >> ./reglog/undone ";
+      local cmd = "echo " .. dkw .. " as undef >> ./reglog/0undone ";
       execcmd(cmd);
       return
    end
@@ -403,8 +405,8 @@ local pickups = function(buff)
 end
 
 --版4: reg.datのとおりに登録する
-local crawl_table = function(e0, e1)
-   local fp = io.open("reg0131b.dat","r")
+local crawl_table = function(fname, e0, e1)
+   local fp = io.open(fname,"r")
    --local fp = io.open("reglog/swaps","r")
    local i = 0;
    for line in fp:lines() do
@@ -416,7 +418,7 @@ local crawl_table = function(e0, e1)
 end
 
 local help = function()
-   print (" # " .. arg[0] .. " [mode] [start] [end]");
+   print (" # " .. arg[0] .. " [mode] [file] [start] [end]");
    print ("");
    print (" [mode] ");
    print ("  - dump: Only dump");
@@ -429,7 +431,7 @@ local help = function()
    print ();
 end
 
-if (#arg ~= 3) then
+if (#arg ~= 4) then
    help();
    return;
 end
@@ -440,13 +442,14 @@ if ((arg[1] == "login" or (arg[1] == "register")) and (loginwiki() == nil)) then
    return;
 end
 
-local e0 = tonumber(arg[2]);
-local e1 = tonumber(arg[3]);
+
+local e0 = tonumber(arg[3]);
+local e1 = tonumber(arg[4]);
 if (e0 > e1) then
    help();
    return;
 end
-crawl_table(e0, e1);
+crawl_table(arg[2], e0, e1);
 
 
 if (false) then

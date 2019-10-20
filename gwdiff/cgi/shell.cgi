@@ -86,6 +86,9 @@ end
 
 local s, c = get_glyph(args.name);
 print(s)
+if (arg[1]) then
+   print(c)
+end
 if (s) then
    --os.execute(("echo '%s %s %s' >> ../p.origina3.dat"):format(args.name, c, s));
 end

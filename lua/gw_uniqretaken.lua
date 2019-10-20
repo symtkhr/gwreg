@@ -22,8 +22,10 @@ local crawl_table = function()
       (function(line) 
          local r = line:split("\t");
          if (not r or not r[1]) then return end
-         local dkw = r[1]:match("^dkw%-[hd0-9]+");
-         if (not dkw) then return end
+         local dkw = r[1]:match("^dkw%-[hd0-9]+") or r[1]:match("^[a-z0-9%-]+")
+         if (not dkw) then
+             return
+         end
          retaken[dkw] = line;
       end)(line)
    end

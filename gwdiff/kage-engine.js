@@ -1,5 +1,5 @@
 var gdef = {};
-var kage_draw = function(q, $img, fill) {
+var kage_draw = function(q, $img, fill, islocal) {
     $img.text("");
     if(true){
     if (q.indexOf(":") < 0) {
@@ -8,7 +8,7 @@ var kage_draw = function(q, $img, fill) {
             .css("width","100%");
         return;
     }
-    if (true) {
+    if (!islocal) {
         $("<img>").appendTo($img).attr("src",
                                        "http://glyphwiki.org/get_preview_glyph.cgi?data=" + q)            .css("width","100%");
         return;

@@ -114,10 +114,11 @@ $(function() {
     var retakenhandler = function(data) {
         var ret = [];
         data.split("\n").forEach(function(line){
-            if (line.indexOf("dkw-") != 0) return;
             var cols = line.split("\t");
-            var dkw = cols.shift().match(/dkw[0-9dh-]+/);
-            if (dkw) dkw = dkw[0];
+            var dkw = cols.shift();
+            dkw = dkw.match(/dkw[0-9dh-]+/) || dkw.match(/^u[0-9a-z-]+/);
+            if (!dkw) return;
+            dkw = dkw[0];
             if (!regs[dkw]) regs[dkw] = {};
             regs[dkw]["retake"] = cols;
         });
@@ -131,49 +132,97 @@ $(function() {
             if (dkw) dkw = dkw[0];
             //regs[dkw]["retake"] = undefined;
             if (!regs[dkw]) regs[dkw] = {};
-	        regs[dkw].mt = "#";
+            regs[dkw].mt = "#";
         });
     };
     
     // 1ページ分の描画
     var draw = function(n)
     {
-        if (isNaN(n)) {
-            n = location.href.split("#").pop();
+        var p = function(n) {
+            if (typeof(n) == "object" && n.nth && !isNaN(n.row) && !isNaN(n.page)) {
+                return n;
+            }
+
+            if (isNaN(n)) {
+                n = location.href.split("#").pop();
+            }
+            if (typeof(n) == 'string') {
+                if (n.indexOf('h') == 0) {
+                    var line = n.substr(1);
+                    var nth = 0;
+                    for (var i = 0; i < line; i++) {
+                        nth += 17 - scanimglist1[351 + parseInt(i / 10)].v[i % 10];
+                    }
+                    return {
+                        page: 351 + parseInt(line / 10),
+                        row: (line % 10),
+                        nth: 50306 + nth,
+                    };
+                }
+                if (n.indexOf("retaken") == 0) {
+                    show_retaken(n.split("retaken").pop()); //$("#rtkfrom").click();
+                    return;
+                }
+                if (n.indexOf("search") == 0) {
+                    $('#search').val(decodeURI(n.split('_')[1])).show();
+                    return;
+                }
+            }
             n = parseInt(n);
             if (isNaN(n)) n = 0;
-        }
-        location.href = "#" + n.toString();
+            return getpage("dkw-" + ("0000" + n).substr(-5));
+        } (n);
+
+        if (!p) return;
+        var n = p.page;
+        if (n <= 350)
+            location.href = "#" + parseInt(mj[p.nth].d.split("dkw-").join(""));
+
+        //return;
         var boxid = "p" + n.toString();
-        $("#result .box").hide();
-        if (0 < $("#" + boxid).size()) {
-            $("#" + boxid).show();
-            return;
+        var $box = $("#result .box");
+
+        if ($box.size() == 0) {
+            $box = $("<div id=" + boxid + " class=box>").appendTo("#result");
         }
-
-        var $box = $("<div id=" + boxid + " class=box>").appendTo("#result");
-
+        $box.text("");
+        $("#scanfile").text("");
+        
         // 箱と絵
-        for (var i = 0; i < (320 < n && n <= 350 ? 4 : 10); i++) {
-            draw_scanimg(n, i, $("<div>").appendTo($box));
-            //console.log(typeof(scanimglist[n]));
+        for (var i = 0; i < 3; i++) {
+            var scant = scanimglist1[n] || [];
+            draw_scanimg(p.page, p.row + i, $("<div>").appendTo($box));
             var $mbox = $("<div>").appendTo($box).addClass("mbox");
+            p.nth = draw_line(p.page, p.row + i, p.nth, $mbox);
+            //console.log(typeof(scanimglist[n]));
         }
-
-        draw_lines($box);
+        boxevents($box);
+        //draw_lines($box, p);
     };
 
     var draw_scanimg = function(n, i, $bar)
     {
-        var BOXWIDTH = 1275;
         var scant = scanimglist1[n] || [];
+        if (scant.v.length <= i) {
+            i -= scant.v.length;
+            n++;
+            scant = scanimglist1[n];
+        }
+        var BOXWIDTH = 1275;
         var top = 0;
         var src = "";
         var rate = 1;
-        if (scant["r"+i]) {
+        if (scant["r" + i]) {
              top = scant["r"+i].top;
              src = scant["r"+i].src;
-             if (!isNaN(src)) src = scant["r"+src].src;
+            var  width = scant["r"+i].width||BOXWIDTH;
+             if (!isNaN(src)) {
+                 width = scant["r"+src].width||BOXWIDTH;
+                 src = scant["r"+src].src;
+             }
+             rate =BOXWIDTH /width;
+             $("#scanfile").text(src+':'+i+':'+top);
         } else if(scant.d) {
             // BOXWIDTH : step = 1275 : 195 = 85 : 13
             var aspect = (320 < n && n <= 350) ? (7 / 17) : (13 / 85);
@@ -182,7 +231,7 @@ $(function() {
             var offset = scant.d.top * rate;
             top = i * BOXHEIGHT + offset;
             src = scant.d.src;
-            $("#scanfile").text(src);
+            $("#scanfile").text(src+':'+i);
         } else {
             return;
         }
@@ -199,7 +248,7 @@ $(function() {
                   "position":"absolute",
                   "width": (scant.d.width * rate) + "px",
                   "height":"auto"});
-	return;
+        return;
         
         /* 
 [refactoring案]
@@ -225,13 +274,32 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
         });
     };
 
-    // 1頁行分の字並べ
+    // 字並べ
+    var draw_line = function(n, i, nth, $mbox) {
+        var scant = scanimglist1[n] || [];
+        if (scant.v.length <= i) {
+            i -= scant.v.length;
+            n++;
+            scant = scanimglist1[n];
+        }
+        var vacant = scant.v[i];
+        var boxlen = 17 - vacant;
+
+        //$('body').append(nth);
+        for (var j = 0; j < boxlen; j++) {
+            var dkw = ((n <= 350 ? mj[nth] : hokans[nth - 50306]) || {d:""}) .d;
+            draw_box(dkw, $mbox);
+            nth++;
+        }
+        return nth;
+    };
     var draw_lines = function($pagebox, n0)
     {
-        var n = (1 * $pagebox.attr("id").split("p").pop());
+        var n = n0.page;
+        var nth = n0.nth;
 
-        // 先頭行リスト
-        var nth = function(n) {
+        // toriaezu tottoku
+        var getnth = function(n) {
             if (355 < n) return 0;
             var nth = 0;
             for (var i = (350 < n ? 351 : 0); i < n; i++) {
@@ -242,8 +310,10 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
 
         // 各行に箱を並べていく
         $pagebox.find(".reg").hide();
+
         scanimglist1[n].v.forEach(function(vacant, i) {
-            $mbox = $pagebox.find(".mbox").eq(i);
+            if(i < n0.row || n0.row + 2 < i) return;
+            $mbox = $pagebox.find(".mbox").eq(i - n0.row);
             var boxlen = 17 - vacant;
             for (var j = 0; j < boxlen; j++) {
                 var dkw = ((n <= 350 ? mj[nth] : hokans[nth]) || {d:""}) .d;
@@ -263,6 +333,27 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
     };
 
     var boxevents = function($pagebox) {
+        $pagebox.find(".reg").unbind().click(function() {
+            var $dkw = $(this).find(".dkw");
+            var $box = $(this);
+
+            $(this).find(".dkw a").focus();
+            $("#retag select").val($(this).find("select").val());
+            $("#retag input[name=free]").val($(this).find("input[name=free]").val());
+            $("#retag .dkw").text($dkw.text());
+            $("#retag .save").prop("disabled", false);
+            if (location.href.indexOf("#retaken") < 0 &&
+                location.href.indexOf("#search") < 0 
+                ) return;
+            var p = getpage($dkw.text());
+            $("#rtkresult .scan").remove();
+            var $scan = $box.parent().prev(".scan");
+            if (!$scan.size()) $scan = $("<div>").insertBefore($box.parents(".mbox"));
+            $("#scanfile").text("");
+            draw_scanimg(p.page, p.row, $scan);
+            return;
+
+        });
         $pagebox.find(".check select").unbind().keydown(function(e){
             var $dkw = $(this).parent().siblings(".dkw");
             var dkw = $dkw.text();
@@ -318,7 +409,9 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
             var v = $(this).val();
             var $box = $(this).parent().parent();
             $box.removeClass("saved");
+
             return;
+            
             var dkw = $box.find(".dkw").text();
 
             if (v == "-") {
@@ -347,6 +440,7 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
                               //$("#savedone").show();
                           });
                 }
+                $(this).prop("disabled", true);
                 $box.removeClass("retaken");
                 return;
             }
@@ -387,6 +481,9 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
                 return "_";
             }(v);
             var memo = "#" + v + ":" + $free.val();
+            var dt = new Date();
+            memo += "@" + dt.toLocaleString();
+
             $.get("./cgi/shell.cgi",
                   {name:dkw, origin:"_", ucs:u, save:glyph, memo:memo},
                   function(ret) {
@@ -394,8 +491,7 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
                       //$("#savedone").show();
                   });
 
-            }).prop("disabled", true);
-
+        }).prop("disabled", true);
 
         $pagebox.find(".check select").change(function() {
             if ($(this).val() == "m" || $(this).val() == "a" || $(this).val() == "ho")
@@ -414,42 +510,58 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
             window.open("https://glyphwiki.org/wiki/" + m[0]);
             //window.open("./gw_edit.htm#" + m[0]);
             }).keydown(function(e){
-                    scanmove(e);
-                    // V押下で画像表示
-        if (e.keyCode == "V".charCodeAt(0)) {
-            var fdkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
-            var $dkw = $(this);
-            var $box = $(this).parents(".reg");
-            //$("#search").val($(this).text());
-            var dkw = $dkw.text();
-            var n = scanimglist.findIndex(obj => dkw < fdkw(obj.t[0]));
-            n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
-            var i = scanimglist[n].t.findIndex(top => dkw < fdkw(top));
-            i = (i == -1) ? (scanimglist[n].t.length - 1) : (i - 1);
-            var $scan = $box.parent().prev(".scan");
-            $("#search").val($scan.size());
-            console.log($scan, $scan.size());
-            if (!$scan.size()) $scan = $("<div>").insertBefore($box.parents(".mbox"));
-            console.log($scan);
-            draw_scanimg(n, i, $scan);
-            return;
-        }
-
-                   // Q押下で画pulldown enable
-                    if (e.keyCode != "Q".charCodeAt(0)) return;
-                    $(this).parent().find(".check select").prop("disabled", false).focus();
-                }).each(function(){
-                    var m = $(this).text().match(/dkw\-[0-9dh]+/)
-                        //window.open("https://glyphwiki.org/wiki/" + m[0]);
-                        var ref = $(this).text().split(":").shift();
-                    $(this).html(
-                                 '<a target="_blank" href="https://glyphwiki.org/wiki/' + m[0] + '">' + $(this).text() + "</a>");
-                    //$("a").text($(this).text()).attr("href", "https://glyphwiki.org/wiki/" + m[0]).appendTo(this);
+                scanmove(e);
+                // V押下で画像表示
+                if (e.keyCode == "V".charCodeAt(0)) {
+                    var fdkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
+                    var $dkw = $(this);
+                    var $box = $(this).parents(".reg");
+                    //$("#search").val($(this).text());
+                    //var dkw = 
+                    var p = getpage($dkw.text());
+                    //scanimglist.findIndex(obj => dkw < fdkw(obj.t[0]));
+                    //n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
+                    //var i = scanimglist[n].t.findIndex(top => dkw < fdkw(top));
+                    //i = (i == -1) ? (scanimglist[n].t.length - 1) : (i - 1);
+                    $("#rtkresult .scan").remove();
+                    var $scan = $box.parent().prev(".scan");
+                    //$("#search").val($scan.size());
+                    console.log($scan, $scan.size());
+                    if (!$scan.size()) $scan = $("<div>").insertBefore($box.parents(".mbox"));
+                    //console.log($scan);
+                    $("#scanfile").text("");
+                    draw_scanimg(p.page, p.row, $scan);
+                    return;
                 }
-);
 
+                // Q押下で画pulldown enable
+                if (e.keyCode != "Q".charCodeAt(0)) return;
+                $(this).parent().find(".check").show().find("select").prop("disabled", false).focus();
+            }).each(function(){
+                var dkw = $(this).text();
+                var m = dkw.match(/dkw\-[0-9dh]+/) || dkw.match(/^u[0-9a-f]+/);
+                var ref = $(this).text().split(":").shift();
+                $(this).html(
+                    '<a target="_blank" href="https://glyphwiki.org/wiki/' + m[0] + '">' + $(this).text() + "</a>");
+                //$("a").text($(this).text()).attr("href", "https://glyphwiki.org/wiki/" + m[0]).appendTo(this);
+            }
+                   );
     };
 
+    var kage_draw = function(q, $img, fill) {
+      $img.text("");
+      //return;
+      if (q.indexOf(":") < 0) {
+          $("<img>").appendTo($img).attr("src",
+                                       "http://glyphwiki.org/glyph/" + q + ".svg")
+            .css("width","100%");
+             return;
+        }
+        $("<img>").appendTo($img).attr("src",
+                                       "http://glyphwiki.org/get_preview_glyph.cgi?data=" + q)
+            .css("width","100%");
+        return;
+    }
     // 箱の中身の描画
     var draw_box = function(dkw, $box)
     {
@@ -457,6 +569,7 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
         var draw_retaken = function(retaken, $reg) {
             if (!retaken) return;
             //console.log(retaken);
+            $reg.css({"width":"105px"});
             var $sel = $reg.find("select");
             var $free = $reg.find("input[name=free]");
             var $glyph = $reg.find(".glyph");
@@ -467,10 +580,11 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
                 var rt = retaken[1].split(":");
                 $sel.val(rt.shift().split("#").pop());
                 $free.val(rt.join(":"));
-                if ($sel.val() == "a" || $sel.val() == "m" || $sel.val() == "ho") $free.show();
+                //if ($sel.val() == "a" || $sel.val() == "m" || $sel.val() == "ho") $free.show();
             }
             if ($sel.val() == "-") return;
             $reg.addClass("retaken").addClass("saved");
+            if ($sel.val() == "sc") $reg.css('background-color', '#6f6');
             
             if (!$rtk.size()) $rtk = $("<span class=retaken>").prependTo($glyph);
             if (retaken[0].indexOf("[[") == 0) {
@@ -480,15 +594,20 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
                 $rtk.attr("rglyph", name);
                 return;
             }
-            kage_draw(retaken[0], $rtk);
+            if (retaken[0].indexOf('$') != -1)
+                kage_draw(retaken[0], $rtk);
+            else if ($sel.val() != 'sc' && $sel.val() != 'jmj' && $sel.val() != 'ref')
+                $rtk.css('background-color', '#f55');
+            else
+                $rtk.css('background-color', '#ddd');
             $rtk.attr("rglyph", retaken[0]);
         };
 
 	    var is_only_retaken = false;
-        var r = mj.find(m => m.d == dkw);
-        if (!r) return; 
+        var r = mj.find(m => m.d == dkw) || {};
+        //if (!r) return;
         var regd = regs[dkw] || {};
-        var koseki = r.k;
+        var koseki = r.k || "";
         var ucs = r.u || "";
         var glyph = ""; // ToDo:p.retaken.datの読取り値
         //var dir = parseInt((parseInt(dkw.substr(4,5), 10) - 1) / 1000);
@@ -507,19 +626,19 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
         }
         var $reg = $("<div class=reg>").attr("id", dkw).appendTo($box);
         var $dkw = $("<div class=dkw>").appendTo($reg);
-        var $koseki = $("<div class=koseki>").appendTo($reg);
         var $glyph = $("<div class=glyph>").appendTo($reg);
-        $("<div class=ucs>").text(c).appendTo($reg);
+        $("<div class=ucs>").text(c).appendTo($reg).hide();
+        var $koseki = $("<div class=koseki>").appendTo($reg);
         var $cat = $("<div class=cat>").appendTo($reg);
         var $tgt = $("<div class=tgt>").appendTo($reg);
         var $check = $("<div class=check>").appendTo($reg);
         var $sel = $("<select>").appendTo($check);
         $("<option>").text("-").appendTo($sel);
         $("<option value=k>").text("k").appendTo($sel);
-        $("<option value=i>").text("i").appendTo($sel);
-        $("<option value=br>").text("br").appendTo($sel);
         $("<option value=u>").text("u").appendTo($sel);
         $("<option value=a>").text("a").appendTo($sel);
+        $("<option value=sc>").text("sc").appendTo($sel);
+        $("<option value=jmj>").text("jmj").appendTo($sel);
         $("<option value=ref>").text("ref").appendTo($sel);
         $("<option value=ho>").text("ho").appendTo($sel);
         $("<option value=m>").text("他").appendTo($sel);
@@ -528,49 +647,24 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
         $dkw.text(dkw);
         $koseki.text((koseki == "none" || koseki == "jmj") ? (ucs + "(" + koseki + ")") : koseki);
 
-
-        var cat_check = function(dkw, koseki, ucs)
-        {
-           if (!gdef[dkw]) return "";
-            var d0 = gdef[dkw].match(/^99:0:0:0:0:200:200:([^:]+)$/);
-            var k0 = (gdef[koseki] || "").match(/^99:0:0:0:0:200:200:([^:]+)$/);
-
-            if (d0 && k0 && d0[1] == k0[1]) return "k";
-            if (!k0 && d0 && d0[1] == koseki) return "k";
-            if (!d0 && k0 && k0[1] == dkw) return "ok";
-            if (!d0) return "o";
-            //console.log(dkw,koseki,d0,k0,gdef[dkw],gdef[koseki]);
-            return "a:" + d0[1];
-        };
-        // cat表示
-        var cat = (regd.mt || "") + cat_check(dkw, koseki, ucs);
-
-        if (cat.indexOf("k") == 0)
-            $cat.addClass("koseki");
-        if (cat.indexOf("o") == 0)
-            $cat.css("background-color", "#afa").addClass("origin");
-        if (cat.indexOf("a") == 0)  {
-            var ref = cat.split("a:").pop();
-            if (ref == ucs && !koseki)
-                cat = "u:" + ref;
-            else {
-                $cat.css("background-color", "#faa").addClass("alias");
-            }
-        }
-        if(cat) {
-            $cat.text(cat);
-        }
+        $cat.hide();
+        $tgt.hide();
+        $koseki.hide();
+        if (!retaken) $check.hide();
+        
         if(tgt) {
             $tgt.text(tgt);
         }
+
 
         //dkw文字の表示
         var $dglyph = $("<span class=dglyph>").appendTo($glyph);
         if (!is_only_retaken || retaken) kage_draw(dkw, $dglyph);
 
+        //return ;
         //retaken文字の表示
         draw_retaken(retaken, $reg);
-
+        return;
         //元になるkosekiまたはucsを表示
         //  dkw-XXXXXと一致するものは表示略
         //  mtnestにより登録されたものは表示略(クリックで元のkosekiまたはucsを表示)
@@ -598,11 +692,72 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
         else if (guess_i) $sel.val("i");
 
     };
+        $("#retag .editor").click(function() {
+                var dkw = $("#retag .dkw").text();
+                window.open("actionedit.htm#" + dkw);
+            });
+        $("#retag .save").click(function() {
+            //sames as プルダウンの値変更時にセーブ?
+            var v = $("#retag select").val();
+            var $box = $("#retag");
+            var dkw = $("#retag .dkw").text();
 
+            if (v == "-") {
+                $.get("./cgi/shell.cgi",
+                      {name:dkw, origin:"_", ucs:"_", save:"_", memo:"#-"},
+                      function(ret) {
+                          console.log("saved:" + dkw);
+                      });
+                $(this).prop("disabled", true);
+                return;
+            }
+            var r = mj.find(m => m.d == dkw);
+            var ucs = r.u || "";
+
+            var u = r.u;
+            //var u = $box.find(".ucs").text();
+            var $free = $("#retag input[name=free]");
+            var glyph = function(v) {
+                var free = $free.val().split("@").shift();
+                if (v == "k") {
+                    return "[[" + r.k + "]]";
+                }
+                if (v == "u") {
+                     return "[[" + r.u + free + "]]";
+                }
+                if (v == "a") {
+                    return "[[" + free + "]]";
+                }
+                if ($box.find("span.retaken").length > 0) {
+                    return $box.find("span.retaken").attr("rglyph");
+                }
+
+                if ($box.find("img.retaken").length > 0) {
+                    return $box.find(".retaken");
+                }
+                return "_";
+            }(v);
+            var memo = "#" + ((v == "k" || v == "u") ? "a" : v) + ":" + $free.val();
+            var dt = new Date();
+            memo += "@" + dt.toLocaleString();
+
+            $.get("./cgi/shell.cgi",
+                  {name:dkw, origin:"_", ucs:u, save:glyph, memo:memo},
+                  function(ret) {
+                      console.log("saved:" + dkw, glyph);
+                      //$("#savedone").show();
+                  });
+            });
+
+
+    $("#asearch").click(function() {
+        $("#search").show();
+    });
+    
     $("#search").keydown(function(e) {
         if (e.keyCode != 13) return;
 	    var str = $("#search").val();
-        $("#" + boxid + " .scan").remove();
+        location.href = '#search_' + encodeURI(str);
         $("#result .box").hide();
         var boxid = "fresult";
         var $box = $("#" + boxid);
@@ -627,46 +782,64 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
             if (c.indexOf("<") == 0) { c = c.substr(1, c.length - 2); }
 	        var fs = mjfind(c);
 	        if (!fs) return;
-
-            var dkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
 	        fs.forEach(function(f) {
-                var n = scanimglist.findIndex(obj => !obj.t ? false : f.d < dkw(obj.t[0]));
-                n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
-                if (scanimglist.length <= n + 1) return;
-                var i = scanimglist[n].t.findIndex(top => f.d < dkw(top));
-                i = (i == -1) ? (scanimglist[n].t.length - 1) : (i - 1);
-                draw_scanimg(n, i, $("<div>").appendTo($box));
 	            draw_box(f.d, $mbox);
 	        });
         })
 	    boxevents($mbox);
     });
 
+
+    var getpage = function(dkw) {
+        var nth = (dkw.indexOf("h") < 0) ?
+            mj.findIndex(m => m.d == dkw) :
+            (50306 + hokans.findIndex(h => h.d == dkw));
+
+        // nth kanji is in which page?
+        return function(nth0){
+            var nth = 0;
+            for (var i = 0; i < scanimglist1.length; i++) {
+                var v = scanimglist1[i].v;
+                for (var j = 0; j < v.length; j++) {
+                    //$("body").append(i +"_" + j + ":" + nth + " ");
+
+                    var col = 17 - v[j];
+                    if (nth + col > nth0) return {page:i, row:j, nth:nth};
+                    nth += col;
+                }
+            }
+            return {nth:nth0};
+        }(nth);
+    };
+    
     $("#rtkfrom").click(function() {
-        //if (e.keyCode != 13) return;
+        show_retaken(0);
+    }); 
+    var show_retaken = function (n){
+    //if (e.keyCode != 13) return;
 	    var ret = Object.keys(regs);
 	    ret = ret.filter(dkw => {
 	        var rtk = regs[dkw].retake;
 	        return rtk && rtk[1] && (rtk[1].indexOf("#-") != 0);
 	    }).sort();
+
+
 	    //var n = $("#rtkfrom").val();
         var boxid = "rtkresult";
         var $box = $("#" + boxid);
-        if ($box.size()) {
-	    $box.show();
-	    return;
-        } else {
-	        var $box = $("<div id=" + boxid + " class=box>").appendTo("#result");
+        if (!$box.size()) {
+            $box = $("<div id=" + boxid + " class=box>").appendTo("#result");
 	    }
-        for(var i = 0; i < ret.length / 15; i++) {
-	        var $mbox = $("<div>").appendTo($box).addClass("mbox");
-            ret.slice(i * 15, (i + 1) * 15)
-            .forEach(function(dkw, i) {
+	    $box.text("");
+        var $mbox = $("<div>").appendTo($box).addClass("mbox");
+        var i = parseInt(n) || 0;
+        console.log(i);
+        ret.slice(i * 60, (i + 1) * 60)
+            .forEach(function(dkw) {
                 draw_box(dkw, $mbox);
-            });
-	        boxevents($box);
-	    }
-    });
+         });
+        boxevents($box);
+    };
 
     $("body").keydown(function(e){
         //console.log(e);
@@ -689,54 +862,122 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
         //if (!e.altKey) return;
         //if ((e.keyCode != 0x5a) &&(e.keyCode != ("X").charCodeAt(0))) return;
         if (e.altKey) return;
-        var n = location.href.split("#").pop();
-        n = parseInt(n);
-        if (isNaN(n)) n = 0;
-        if (0 < n && e.keyCode == "Z".charCodeAt(0)) draw(n - 1);
-        if (e.keyCode == "X".charCodeAt(0)) draw(n + 1);
-        if (e.keyCode == "9".charCodeAt(0))
+
+        if (e.keyCode == "R".charCodeAt(0)) redraw(n);
+        if (e.keyCode == "Z".charCodeAt(0)) {
+            if (location.href.indexOf("#retaken") > 0) {
+                var n = location.href.split("#retaken").pop();
+                n = parseInt(n) || 0;
+                location.href = "#retaken" + (n<1 ? 0:n-1);
+                draw();
+                return;
+            }
+            if (location.href.indexOf("#h") > 0) {
+                var n = location.href.split("#h").pop();
+                n = parseInt(n) || 0;
+                location.href = n < 3 ? '#h0' : ("#h" + (n - 3));
+                draw();
+                return;
+            }
+            var n = $(".reg").eq(0).find(".dkw").text();
+            $("#search").val(n);
+            var p = getpage(n);
+            //n = parseInt(n.split("dkw-").join(""));
+            //if (isNaN(n)) n = 1;
+            
+            var prev_rows = function(p, row) {
+                for (var i = 0; i < row; i++) {
+                    p.row--;
+                    if (p.row < 0) {
+                        if (p.page == 0) return p;
+                        p.page--;
+                        p.row = scanimglist1[p.page].v.length - 1;
+                    }
+                    p.nth -= 17 - scanimglist1[p.page].v[p.row];
+                }
+                return p;
+            };
+		console.log(p);
+            p = prev_rows(p, 3);
+            console.log(p);
+		$("#search").val(p.nth + "page" + mj[p.nth]);
+            //return;
+            draw(p);
+		return;
+        }
+        if (e.keyCode == "X".charCodeAt(0)) {
+            if (location.href.indexOf("#retaken") > 0) {
+                var n = location.href.split("#retaken").pop();
+                n = parseInt(n) || 0;
+                location.href = "#retaken" + (n+1);
+                draw();
+                return;
+            }
+            if (location.href.indexOf("#h") > 0) {
+                var n = location.href.split("#h").pop();
+                n = parseInt(n) || 0;
+                location.href = "#h" + (n+3);
+                draw();
+                return;
+            }
+            var n = $(".box:visible .mbox:last-child .reg:last-child .dkw").text();
+            $("#search").val(n);
+            n = parseInt(n.split("dkw-").join(""));
+            if (isNaN(n)) n = 0;
+            draw(n + 1);
+        }
+        if (e.keyCode == "9".charCodeAt(0)) {
+            $('#scanfile').text('');
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
-                console.log($img.css("width"));
                 var width = $img.css("width").split("px").shift() * 1 + 5;
                 $img.css("width", width + "px");
+                $('#scanfile').text(width);
                 //var rtop = -1 * $img.css("top").split("px").shift() - (i);
                 //$img.css("top", -rtop + "px");
             });
-        if (e.keyCode == "0".charCodeAt(0))
+        }
+        if (e.keyCode == "0".charCodeAt(0)) {
+            $('#scanfile').text('');
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var width = $img.css("width").split("px").shift() - 5;
-                console.log(width);
                 $img.css("width", width + "px");
+                console.log(width);
+                $('#scanfile').text(width);
                 //var rtop = -1 * $img.css("top").split("px").shift() + (i);
                 //$img.css("top", -rtop + "px");
             });
-        if (e.keyCode == "6".charCodeAt(0))
+        }
+        if (e.keyCode == "6".charCodeAt(0)) {
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("top").split("px").shift() - 5;
                 $img.css("top", -rtop + "px");
+                if (i==0)$('#scanfile').text(rtop);
             });
+        }
         if (e.keyCode == "5".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("top").split("px").shift() + 5;
                 $img.css("top", -rtop + "px");
+                if (i==0)$('#scanfile').text(rtop);
             });
         if (e.keyCode == "8".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("left").split("px").shift() - 5;
                 $img.css("left", -rtop + "px");
+                if (i==0)$('#scanfile').text(rtop);
             });
         if (e.keyCode == "7".charCodeAt(0))
             $(".box:visible .scan").each(function(i) {
                 var $img = $(this).find("img");
                 var rtop = -1 * $img.css("left").split("px").shift() + 5;
                 $img.css("left", -rtop + "px");
+                if (i==0)$('#scanfile').text(rtop);
             });
-        if (e.keyCode == "R".charCodeAt(0)) redraw(n);
         
     };
 
@@ -841,7 +1082,9 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
                 }
                 return "_";
             }(v);
-            var memo = "#" + v + ":" + $free.val();
+            var memo = "#" + v + ":" + $free.val() + ";";
+            var dt = new Date();
+            memo += dt.toLocaleString();
             $.get("./cgi/shell.cgi",
                   {name:dkw, origin:koseki, ucs:u, save:glyph, memo:memo},
                   function(ret) {
@@ -1079,40 +1322,6 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
     });
     
     var editor_init = function(c, def) {
-        if (def) {
-            $("#defglyph").val(def.split("$").join("\n")).focus();
-            agendadump();
-        } else {
-            $.get("./cgi/shell.cgi?name=" + c,
-              function(def) {
-                  if (def.indexOf(":") < 0) return;
-                  $("#defglyph").val(def.split("$").join("\n")).focus();
-                  agendadump();
-              });
-        }
-        var fs = mjfind(c);
-        if (fs.length == 0)  return;
-        var $info = $("#info").text("");
-        $("<button>").text(fs[0].d).appendTo($info);
-        $("<button>").text(fs[0].k).appendTo($info);
-        $("<button>").text(fs[0].u + ":" + ucs2c(fs[0].u)).appendTo($info);
-        $("<input name=loadglyph>").appendTo($info);
-        $("<button>").text("load").appendTo($info);
-
-        $info.find("button").click(function() {
-            var c = $(this).text().split(":").shift();
-            if (c == "load") c = $("[name=loadglyph]").val();
-            $.get("./cgi/shell.cgi?name=" + c,
-                  function(def) {
-                      if (def.indexOf(":") < 0) return;
-                      $("#defglyph").val(def.split("$").join("\n")).focus();
-                      agendadump();
-                  });
-        });
-        //console.log(fs[0].split("[").shift());
-        $("#savename").val(fs[0].d + ":" + fs[0].k + ":" + fs[0].u);
-        $("#undolist").text("");
-        $("#editorbox").show();
     };
 
     $("#editorbox .closebox").click(function() {

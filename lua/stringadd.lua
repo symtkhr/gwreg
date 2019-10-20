@@ -30,7 +30,7 @@ table.join = function (tbl, sep)
          ret = ret .. sep .. seg
       end
    end
-   return ret
+   return ret or ""
 end
 
 

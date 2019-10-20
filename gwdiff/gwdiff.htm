@@ -57,7 +57,7 @@
   .glyph span {width:50px; height:50px; border: solid gray 1px; padding:0; margin:0; display:block; line-height:20px;}
   span.dglyph {border-color:red;}
   span.retaken {border-color:blue;}
-
+  #ui button {height:50px; width:100px;}
 .reg.retaken {background-color: #bdb;}
   #previewbox {
   width:200px; height:200px; border:1px solid gray;
@@ -86,10 +86,7 @@ opacity:.5;
 <title>差分確認</title>
 </head>
 
-<body>
-  検索窓<input id="search"> / 
-  <button id="rtkfrom">登録分</button>
-  <button id="scanfile">Scanning</button>
+<body style="height:100%;">
   <div id="result"></div>
   <div>
     <button id="savepage">savepage</button>
@@ -98,6 +95,20 @@ opacity:.5;
     <button id="replist">登録一覧</button>
   </div>
   <hr/>
+  <div id="ui">
+    検索窓<input id="search" /> / 
+    <button id="rtkfrom">登録分</button>
+    <span id="scanfile">Scanning</span>
+    <button id="kz">Prev</button>
+    <button id="kx">Next</button>
+    <span style="width:40px;"></span>
+    <button id="k9">ZoomIn</button>
+    <button id="k0">ZoomOut</button>
+    <button id="k7">Left</button>
+    <button id="k8">Right</button>
+    <button id="k5">Up</button>
+    <button id="k6">Down</button>
+  </div>
   <div id="editorbox">
     <button class="closebox" style="float:right;">X</button>
     <div id="info">None</div>
@@ -108,7 +119,7 @@ opacity:.5;
         <div id="origin" style="width:200px; height:200px; top:0; position:absolute; left:0;"></div>
         
       </div>
-      <label><input type="checkbox" id="showorigin">show origin</label>
+      <label><input type="checkbox" id="showorigin" />show origin</label>
       <button id="draw">draw</button>
       <button id="official">official</button>
     </div>
