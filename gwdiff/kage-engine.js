@@ -1,18 +1,18 @@
 var gdef = {};
 var kage_draw = function(q, $img, fill, islocal) {
-    $img.text("");
+    var CGIPATH = "../cgi-bin/shell.cgi";
     if(true){
-    if (q.indexOf(":") < 0) {
-        $("<img>").appendTo($img).attr("src",
-                                       "http://glyphwiki.org/glyph/" + q + ".svg")
-            .css("width","100%");
-        return;
-    }
-    if (!islocal) {
-        $("<img>").appendTo($img).attr("src",
-                                       "http://glyphwiki.org/get_preview_glyph.cgi?data=" + q)            .css("width","100%");
-        return;
-    }
+	if (q.indexOf(":") < 0) {
+            $("<img>").appendTo($img).attr("src",
+					   "http://glyphwiki.org/glyph/" + q + ".svg")
+		.css("width","100%");
+            return;
+	}
+	if (!islocal) {
+            $("<img>").appendTo($img).attr("src",
+					   "http://glyphwiki.org/get_preview_glyph.cgi?data=" + q)            .css("width","100%");
+            return;
+	}
     }
     if (q.indexOf(":") < 0) q = "99:0:0:0:0:200:200:" + q;
     
@@ -56,7 +56,7 @@ var kage_draw = function(q, $img, fill, islocal) {
                     if (loaded == needed) draw(kage);
                     return;
                 }
-                $.get("./cgi/shell.cgi", {name: gname},
+                $.get(CGIPATH, {name: gname},
                       function(q) {
                           q = q.trim();
                           kage.kBuhin.push(gname, q);

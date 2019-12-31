@@ -3,16 +3,17 @@ $(function() {
     var mj = [];     // {d:大漢和番号, k:戸籍統一, u:UCS}のテーブル
     var tgts = {};   // {u%x(=UCS番号): 差替部首}
     var hokans = {}; // {d:大漢和番号, s:画数}のテーブル
-
+    var CGIPATH = "../cgi-bin/shell.cgi";
+    
     $.ajaxSetup({ cache: false });
     var page_init = function() {
         var load = 0;
         // 読込ファイルの一覧
         var loadfiles = [
         //  {name:"p.def.dat", handler:defhandler},
-            {name:"mji_00502_pickup.txt", handler:mjhandler},
-            {name:"kdbonly.htm.txt", handler:kdbhandler},
-            {name:"p.ishiitgt.txt", handler:tgthandler},
+            {name:"../tables/mji_00502_pickup.txt", handler:mjhandler},
+            {name:"../tables/kdbonly.htm.txt", handler:kdbhandler},
+            {name:"../tables/p.ishiitgt.txt", handler:tgthandler},
             {name:"p.retaken.dat", handler:retakenhandler},
             {name:"p.done.dat", handler:donehandler},
             {name:"p.hokan.dat", handler:hokanhandler},
@@ -21,6 +22,7 @@ $(function() {
         var fileload = function(file) {
             $.get(file.name, function(data) {
                 load++;
+		$("body").append(file.name, "<br>");
                 if (file.handler) file.handler(data, file);
                 if (load != loadfiles.length) return fileload(loadfiles[load]);
                 var n = location.href.split("#").pop();
@@ -180,7 +182,7 @@ $(function() {
             "https://glyphwiki.org/get_preview_glyph.cgi?data=" + def);
 */
         $("#dump").click();
-        console.log(def);
+        $("body").append(def);
         kage_draw(def, $("div#preview").show(), "white", true);
     });
 
@@ -289,7 +291,7 @@ $(function() {
         var k = v[1].trim();
         var u = v[2].trim();
         var glyph = $("#defglyph").val().split("\n").join("$");
-        $.get("./cgi/shell.cgi",
+        $.get(CGIPATH,
               {name:d, origin:k, ucs:u, save:glyph, memo:"#m:"},
               function(ret) {
                   $("#savedone").show();
@@ -332,7 +334,7 @@ $(function() {
         var loaded = 0;
         
         cs.forEach(function(c) {
-            $.get("./cgi/shell.cgi?name=" + c,
+            $.get(CGIPATH + "?name=" + c,
                   function(rglyph) {
                       var qrows = newg.split("$");
 
@@ -372,7 +374,7 @@ $(function() {
             $("#defglyph").val(def.split("$").join("\n")).focus();
             agendadump();
         } else {
-            $.get("./cgi/shell.cgi?name=" + c,
+            $.get(CGIPATH + "?name=" + c,
               function(def) {
                   if (def.indexOf(":") < 0) return;
                   $("#defglyph").val(def.split("$").join("\n")).focus();
@@ -399,7 +401,7 @@ $(function() {
 		return;
 	    }
 	c = $("[name=loadglyph]").val();
-            $.get("./cgi/shell.cgi?name=" + c,
+            $.get(CGIPATH + "?name=" + c,
                   function(def) {
                       if (def.indexOf(":") < 0) return;
                       $("#defglyph").val(def.split("$").join("\n")).focus();
@@ -451,7 +453,7 @@ $(function() {
             return;
         }
         */
-        $.get("./cgi/shell.cgi?name=" + c, defhandler);
+        $.get(CGIPATH + "?name=" + c, defhandler);
     };
 
 

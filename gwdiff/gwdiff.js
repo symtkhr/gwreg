@@ -264,6 +264,7 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
 
     var boxevents = function($pagebox) {
         $pagebox.find(".check select").unbind().keydown(function(e){
+            console.log(e);
             var $dkw = $(this).parent().siblings(".dkw");
             var dkw = $dkw.text();
             var $box = $(this).parents(".reg");
