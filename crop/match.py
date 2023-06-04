@@ -22,9 +22,6 @@ def get_templates(rate = 1):
     temp0 = cv2.imread("tmpnum.png")
     temp0g = cv2.cvtColor(temp0, cv2.COLOR_BGR2GRAY)
     temp0g = cv2.resize(temp0g, None, None, rate, rate)
-    cv2.imwrite("tmpnummini.png", temp0g)
-
-    # 2値化して輪郭検出
     _, tempbw = cv2.threshold(temp0g, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     contours, hierarchy = cv2.findContours(tempbw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -42,6 +39,46 @@ def get_templates(rate = 1):
             w = int(wav)
             x = x - int((wav-w)/2)
         ret.append(temp0g[y-1:y+h+1, x-1:x+w+1])
+    ret.insert(0,ret[9])
+
+    """
+    gray = cv2.cvtColor(fp["dump"], cv2.COLOR_BGR2GRAY)
+    cv2.rectangle(gray, (0,0), (250,30), (255,255,255), thickness=-1)
+    for i,sample in enumerate(ret):
+        if (i==1):
+            gray[1:1+len(sample), 2 + i*25:i*25+len(sample[0])] = sample[0:,:-2]
+        else:
+            gray[1:1+len(sample), 2 + i*25: 2+i*25+len(sample[0])] = sample
+    cv2.imwrite("result00.png", gray[0:30, 0:25*10])
+    exit()
+    """
+    return ret[:-1]
+
+
+# テンプレートを生成する(numfont使用)
+def get_templates(rate = 1):
+    # 15x25フォントを読み込む
+    temp0 = cv2.imread("numfont00.png")
+    temp0g = cv2.cvtColor(temp0, cv2.COLOR_BGR2GRAY)
+    temp0g = cv2.resize(temp0g, None, None, rate, rate)
+    _, tempbw = cv2.threshold(temp0g, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    contours, hierarchy = cv2.findContours(tempbw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # 座標位置を取得
+    ps = [cv2.boundingRect(contour) for contour in contours]
+    ps = sorted(ps)
+    wav = sum([p[2] for p in ps]) / len(ps)
+    print(ps,wav)
+    # テンプレ作成
+    ret = []
+    for p in ps:
+        x,y,w,h = p
+        if (w < wav):
+            w = int(wav)
+            x = x - int((wav-w)/2)
+        ret.append(temp0g[y-1:y+h+1, x-1:x+w+1])
+    #return [cv2.resize(s, None, None, rate, rate) for s in ret]
+
     return ret
 
 # 数字をテンプレートマッチする
@@ -52,7 +89,7 @@ def find_numbers(img = fp["gray"], samples = fp["sample"], threshold = 0.9):
         loc = np.where(result >= threshold)
 
         for pt in zip(*loc[::-1]):
-            ret.append([pt[0], pt[1], (i + 1) % 10])
+            ret.append([pt[0], pt[1], (i + 0) % 10])
 
         # テスト用. 画面上に生成
         if (fp["dump"].any):
@@ -162,7 +199,7 @@ def cropbox(group, rate = 1, digits = 5):
         xd0,xd1,yd0,yd1 = find_whitespace(crop)
         #print(xd0,xd1,yd0,yd1)
         if (yd0 < 5): y0 -= int(10 * rate)
-        if (yd1 < 5): y1 += int(10 * rate)
+        #if (yd1 < 5): y1 += int(10 * rate)
         if (xd0 < 5): x0 -= int(17 * rate)
         if (xd1 < 5): x1 += int(17 * rate)
         if (xd0 < 5 or xd1 < 5 or yd0 < 5 or yd1 < 5):
@@ -170,6 +207,8 @@ def cropbox(group, rate = 1, digits = 5):
             continue
         break
 
+    # Todo:左右の空白調整
+    
     rename = False
     if (not("m" in fname) and (len(fname) < digits)):
         rename = True
@@ -188,6 +227,8 @@ def cropbox(group, rate = 1, digits = 5):
         path = fp["dir"] + fname + "-" + str(i) + ".png"
     print("dump " + path, y1-y0, x1-x0)
     #cv2.imwrite(path, fp["load"][y0:y1,x0:x1])
+
+
 
 def main(args):
     fpath = args[0]
@@ -208,13 +249,27 @@ def main(args):
 
     # グループ化して位置と番号を割り出す
     ngs = group_numbers(nump)
+    ngs = sorted(ngs, key=lambda p: p[1][0][1])
     draw_ngs(ngs)
 
     # 切り出す
     # Todo: gがすでにcropboxの返りに含まれていれば除去
     crops = [cropbox(g, rate, 5) for g in ngs]
-    crops = sorted(crops)
 
+    # y=10px 以内の要素を同列として扱う
+    for i,p in enumerate(crops):
+        if (i == 0):
+            p.append(p[4])
+        else:
+            bef = crops[i - 1]
+            p.append(p[4] if (10 < p[4] - bef[4]) else bef[5])
+        print(p)
+    crops = sorted(crops, key=lambda p: (p[5], -p[1], p[0]))
+    # 近接する要素は消す
+    for i,p in enumerate(crops):
+        if (i != 0 and abs(p[1] - crops[i - 1][1]) < 10): p[5] = -1
+    print(crops)
+    
     # 面付け
     w0 = max([(0 if ("m" in c[0]) else c[2]-c[1]) for c in crops])
     h0 = max([(0 if ("m" in c[0]) else c[4]-c[3]) for c in crops])
@@ -223,17 +278,17 @@ def main(args):
     row = 20
     fp["dump"] = np.ones((int(1 + len(crops) / row) * h0, row * w0), np.uint8) * 255
 
-    for i,c in enumerate(crops):
+    for i,c in enumerate(filter(lambda c: (not "m" in c[0]) and 0 <= c[5], crops)):
         x = (i % row) * w0
         y = int(i / row) * h0
-        name,x0,x1,y0,y1 = c
+        name,x0,x1,y0,y1 = c[:5]
         w = x1 - x0
         h = y1 - y0
-        if (w0 < w or h0 < h): continue
         print(name, end=" ")
+        if (w0 < w or h0 < h): continue
         fp["dump"][y:y+h, x:x+w] = fp["gray"][y0:y1,x0:x1]
-    print()
-
+    print([c[0] for c in filter(lambda c: ("m" in c[0]) or c[5] < 0, crops)])
+    
     # 出力
     fname = fpath.split("/")[-1].split(".")[0] + "crop" + str(w0) + "x" + str(h0) + ".png"
     cv2.imwrite(fname, fp["dump"])
@@ -248,9 +303,10 @@ def renamer_test():
     exit()
 
 def help() :
-    print("argv[1] = input png")
+    #for i, n in enumerate(filter(lambda c: c %2, [1,2,3])): print(i,n)
+    print("argv = [input png file, rate, digit],")
     exit()
-    
+
 #renamer_test()
 import sys
 if (len(sys.argv) < 2): help()
