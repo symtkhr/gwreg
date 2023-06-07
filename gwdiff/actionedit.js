@@ -14,9 +14,6 @@ $(function() {
             {name:"../tables/mji_00502_pickup.txt", handler:mjhandler},
             {name:"../tables/kdbonly.htm.txt", handler:kdbhandler},
             {name:"../tables/p.ishiitgt.txt", handler:tgthandler},
-            {name:"p.retaken.dat", handler:retakenhandler},
-            {name:"p.done.dat", handler:donehandler},
-            {name:"p.hokan.dat", handler:hokanhandler},
         ];
 
         var fileload = function(file) {

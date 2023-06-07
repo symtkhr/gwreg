@@ -10,9 +10,9 @@ $(function() {
         // 読込ファイルの一覧
         var loadfiles = [
         //  {name:"p.def.dat", handler:defhandler},
-            {name:"mji_00502_pickup.txt", handler:mjhandler},
-            {name:"kdbonly.htm.txt", handler:kdbhandler},
-            {name:"p.ishiitgt.txt", handler:tgthandler},
+            {name:"../tables/mji_00502_pickup.txt", handler:mjhandler},
+            {name:"../tables/kdbonly.htm.txt", handler:kdbhandler},
+            {name:"../tables/p.ishiitgt.txt", handler:tgthandler},
             {name:"p.retaken.dat", handler:retakenhandler},
             {name:"p.done.dat", handler:donehandler},
             {name:"p.hokan.dat", handler:hokanhandler},
@@ -193,7 +193,7 @@ $(function() {
                   "width":BOXWIDTH + "px",
                   "height": (BOXWIDTH * 4 / 51) + "px",
                   "border":"1px solid red"});
-        var $img = $("<img>").attr("src", "scanimg/" + src).appendTo($bar);
+        var $img = $("<img>").attr("src", "../scanimg/" + src).appendTo($bar);
         $img.css({"top": -top + "px",
                   "left":(-scant.d.left * rate) + "px",
                   "position":"absolute",
@@ -307,7 +307,7 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
             
             if (e.keyCode == 188) idx++;
             //var c = regs.findIndex(r => r[0] == dkw);
-            scanimglist[n].t[idx] = 1 * dkw.split("dkw-").pop();
+            scanimglist1[n].t[idx] = 1 * dkw.split("dkw-").pop();
             //console.log(topnums);
             draw_lines($pagebox);
             if (e.keyCode == 190)
@@ -423,6 +423,7 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
             var $box = $(this).parents(".reg");
             //$("#search").val($(this).text());
             var dkw = $dkw.text();
+            let scanimglist = scanimglist1;
             var n = scanimglist.findIndex(obj => dkw < fdkw(obj.t[0]));
             n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
             var i = scanimglist[n].t.findIndex(top => dkw < fdkw(top));
@@ -630,7 +631,8 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
 	        if (!fs) return;
 
             var dkw = function(v) { return "dkw-" + ("0000" + v).substr(-5); };
-	        fs.forEach(function(f) {
+	    fs.forEach(function(f) {
+                let scanimglist = scanimglist1;
                 var n = scanimglist.findIndex(obj => !obj.t ? false : f.d < dkw(obj.t[0]));
                 n = (n == -1) ? (scanimglist.length - 1) : (n - 1);
                 if (scanimglist.length <= n + 1) return;
@@ -800,11 +802,11 @@ x3: プルダウン編集時はキーアクションが要る仕様にしたい
             top = top.split("px").shift();
             sec = sec.split("px").shift();
             n = parseInt(n.split("p").join(""));
-            scanimglist[n].d.top = -top;
-            scanimglist[n].d.step = top - sec;
+            scanimglist1[n].d.top = -top;
+            scanimglist1[n].d.step = top - sec;
         });
 
-        $("#retakes").val(JSON.stringify(scanimglist));
+        $("#retakes").val(JSON.stringify(scanimglist1));
         
         return;
         var n = location.href.split("#").pop();

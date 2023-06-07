@@ -280,75 +280,65 @@ def cropbox(group, rate = 1, digits = 5):
 
 
 def main(args):
-    print("argv=", args)
-    fpath = args[0]
-    rate   = args[1]  if 1 < len(args) else 1.0
-    digits = int(args[2])  if 2 < len(args) else 5
+    dels = []
+    pngs = []
+    for arg in args:
+        if (arg.startswith("-d=")):
+            dels = [int(d) for d in arg.split("=")[1].split(",")]
+            continue
+        pngs.append(arg)
+    print("argv=",[pngs, dels])
 
-    # 読み取りデータ
-    fp["load"] = cv2.imread(fpath)
-    # 出力先
-    fp["dump"] = fp["load"].copy()
-
-    # 数字の位置を割り出す
-    fp["gray"] = cv2.cvtColor(fp["load"], cv2.COLOR_BGR2GRAY)
-    if (rate == "auto"):
-        fp["sample"], rate = profilenum()
-    else:
-        rate = float(rate)/64
-        fp["sample"] = get_templates(rate)
-    nump = find_numbers(fp["gray"], fp["sample"])
-    #exit()
-    #draw_nump(nump)
-
-    # グループ化して位置と番号を割り出す
-    ngs = group_numbers(nump)
-    ngs = sorted(ngs, key=lambda p: p[1][0][1])
-    #draw_ngs(ngs)
-
-    # 切り出す
-    # Todo: gがすでにcropboxの返りに含まれていれば除去
-    crops = [cropbox(g, rate, 5) for g in ngs]
-
-    # y=10px 以内の要素を同列として扱う
-    for i,p in enumerate(crops):
-        if (i == 0):
-            p.append(p[4])
-        else:
-            bef = crops[i - 1]
-            p.append(p[4] if (10 < p[4] - bef[4]) else bef[5])
-        #print(p)
-    crops = sorted(crops, key=lambda p: (p[5], -p[1], p[0]))
-    # 近接する要素は消す
-    for i,p in enumerate(crops):
-        if (i != 0 and abs(p[1] - crops[i - 1][1]) < 10): p[5] = -1
-
-
-    # 面付け
-    tiles   = list(filter(lambda c: (not "m" in c[0]) and 0 <= c[5], crops))
-    untiles = list(filter(lambda c: (    "m" in c[0])  or  c[5] < 0, crops))
-    w0 = max([(c[2]-c[1]) for c in tiles])
-    h0 = max([(c[4]-c[3]) for c in tiles])
-
+    glyphs = []
+    wmax, hmax = 0, 0
     row = 20
-    fp["dump"] = np.ones((int(1 + len(tiles) / row) * h0, row * w0), np.uint8) * 255
+    fp["load"] = [cv2.imread(fpath, cv2.IMREAD_GRAYSCALE) for fpath in pngs]
+    for fid,fpath in enumerate(pngs):
+        # 読み取りデータ
+        _, nega = cv2.threshold(fp["load"][fid], 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        # 枠サイズ
+        w0, h0 = [int(px) for px in fpath.split("crop")[1].split(".png")[0].split("x")]
+        col0 = int((1 + len(nega)) / h0)
+        print()
+        for i in range(col0 * row):
+            if (i in dels): continue
+            x0 = (i % row) * w0
+            y0 = int(i / row) * h0
+            x1 = x0 + w0
+            y1 = y0 + h0
+            sp = find_whitespace(nega[y0:y1,x0:x1])
+            if (-1 in sp): continue
+            print("*",end="", flush=True)
+            # グリフのサイズ
+            w = w0 - (sp[1] + sp[0])
+            h = h0 - (sp[3] + sp[2])
+            if (wmax < w): wmax = w
+            if (hmax < h): hmax = h
+            # 読込位置
+            xf = x0 + sp[0] - 5 # 左端から5px
+            yf = y0 + h0 - sp[3] + 5 # 下端から5px
+            if (xf < 0): xf = 0
+            glyphs.append([fid, xf, yf])
+    wmax += 10
+    hmax += 10
+    col = int((len(glyphs) - 1) / row + 1)
+    fname = pngs[0].split("/")[-1].split(".")[0] + "resplit" + str(wmax) + "x" + str(hmax) + ".png"
+    print()
+    respng = np.ones((col * hmax, row * wmax), np.uint8) * 255
+    for i,glyph in enumerate(glyphs):
+        #print(glyph)
+        fid, xf, yf = glyph
+        # 書出位置
+        xt = (i % row) * wmax
+        yt = int(i / row) * hmax
+        h = hmax if (hmax < yf) else yf
+        w = wmax
+        #print("*",end="", flush=True)
+        respng[yt:yt+h,xt:xt+w] = fp["load"][fid][yf-h:yf, xf:xf+w]
 
-    fname = fpath.split("/")[-1].split(".")[0] + "crop" + str(w0) + "x" + str(h0) + ".png"
-    print("<<concat>>", fname)
-
-    for i,c in enumerate(tiles):
-        x = (i % row) * w0
-        y = int(i / row) * h0
-        name,x0,x1,y0,y1 = c[:5]
-        w = x1 - x0
-        h = y1 - y0
-        print(name, end=" ")
-        if (w0 < w or h0 < h): continue
-        fp["dump"][y:y+h, x:x+w] = fp["gray"][y0:y1,x0:x1]
-    
-    print([c[0] for c in untiles])
     # 出力
-    cv2.imwrite(fname, fp["dump"])
+    print("<<concat>>", fname, "(" + str(len(glyphs)) + "glyphs)")
+    cv2.imwrite(fname, respng[:col*hmax])
     
 def renamer_test():
     img = cv2.cvtColor(cv2.imread("./dump0603/4.png"), cv2.COLOR_BGR2GRAY)
@@ -360,8 +350,8 @@ def renamer_test():
     exit()
 
 def help() :
-    #for i, n in enumerate(filter(lambda c: c %2, [1,2,3])): print(i,n)
-    print("argv = [input png file, rate, digit],")
+    print("argv = input.png input.png ... -d=DELETES -i=INSERTS")
+    print
     exit()
 
 #renamer_test()
