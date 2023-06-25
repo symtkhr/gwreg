@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="pragma" content="no-cache"></meta>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"></meta>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+<script src="scancrop.js"></script>
+<script src="dkwregcrop.js"></script>
+<style>
+  .reg {
+  font-size:12px; font-family:monospace;
+  display:flex;
+  //flex-direction: row-reverse;
+  flex-wrap: wrap;
+  width:52px;
+  height:70px;
+  border:solid gray 1px;
+ // overflow:hidden;
+  background-color:#ffc;
+  position:relative;
+  }
+  .ucs {
+  font-family:HanaMinA, HanaMinB;
+  font-size:20px;
+  }
+.scan { width:2000px;
+  position: relative; overflow:hidden;
+  height:100px; border:1px solid red;
+      }
+
+.mbox {
+  display: flex;
+  //flex-direction: row-reverse;
+  //justify-content: space-between;
+  flex-wrap: wrap;
+  width:100%;
+  border:1px solid blue;
+}
+
+.dkw {height: 18px; white-space:nowrap; font-size:14px; text-align:right;}
+.dkw a:focus {background-color:red;}
+.koseki {height: 0px; white-space:nowrap; text-align:right;}
+.glyph {height: 52px; padding:0; display:flex;
+        flex-wrap: nowrap;}
+.cat {height: 15px;white-space:nowrap; font-size:12px;}
+.tgt {height: 17px;white-space:nowrap; }
+.check {height: 20px;white-space:nowrap; position:absolute; right:0; top:0;}
+.check select { -moz-appearance:none; width:50px; height:18px; font-size:15px; border:1px solid #a00;}
+.check select option { -moz-appearance:none; font-size:15px; height:15px; border:1px solid glay;}
+.check select:focus, #savepage:focus {background-color:red;}
+.check input { height:20px; font-size:15px; width:80px; border:1px solid #a00;}
+.newdef {width:52px; height:52px; font-size:10px; display:inline-block; background-color:green; overflow:hidden;}
+  .glyph span {width:50px; height:50px; border: solid gray 1px; padding:0; margin:0; display:block; line-height:20px;}
+  span.dglyph {border-color:red;}
+  span.retaken {border-color:blue;}
+  #ui button {height:50px; width:50px;}
+  .reg.retaken {background-color: #bdb;}
+  #previewbox {
+  width:200px; height:200px; border:1px solid gray;
+  position:relative;
+  background-color: #00f;
+}
+  #origin {
+    opacity:.5;
+}
+#preview{
+ mix-blend-mode: screen;
+}
+#editorbox {
+  display:inline-block;
+  width:auto;
+  background-color: #efe;
+  border: 1px solid gray;
+  position:sticky;
+  bottom:0;
+  left:0;
+}
+.closebox {
+  cursor:pointer;
+}
+</style>
+<title>差分確認</title>
+</head>
+
+<body style="height:100%; width:1275px;">
+  <div id="ui">
+    <div style="float:left; width:300px;">
+      <a href="#retaken">retaken</a>
+      <a href="#search" id="asearch">search</a>
+      <input id="search" style="display:none;" />
+      <br/>
+      <span id="scanfile">Scanning</span>
+    </div>
+    <button id="kz">Prev</button>
+    <button id="kx">Next</button>
+    <span style="width:40px;"></span>
+    <button id="k9">+</button>
+    <button id="k0">-</button>
+    <button id="k7">&#x25c0;</button>
+    <button id="k8">&#x25b6;</button>
+    <button id="k5">&#x25b2;</button>
+    <button id="k6">&#x25bc;</button>
+    <span style="left-margin:100px;" id="retag">
+      <span class="dkw"></span>
+      <select>
+        <option>-</option>
+        <option value="k">k</option>
+        <option value="u">u</option>
+        <option value="a">a</option>
+        <option value="sc">sc</option>
+        <option value="jmj">jmj</option>
+        <option value="ref">ref</option>
+        <option value="ho">ho</option>
+        <option value="m">他</option>
+      </select>
+      <input name="free" style="width:50px;"/>
+      <button class="editor">edit</button>
+      <button class="save">save</button>
+    </span>
+  </div>
+  <div id="result" style="border:1px solid blue;"></div>
+</div>
+<div style="display:none;">
+  <div>
+    <button id="savepage">savepage</button>
+    <textarea id="retakes" style="width:90%; height:90px;">??</textarea>
+    <button id="dumpref">refちぇっく</button>
+    <button id="replist">登録一覧</button>
+  </div>
+  <hr/>
+
+  <span>
+    <li>Alt + [X]/[Z] ... 次ページ/前ページ
+    <li>dkw選択中に[5]/[6]/[7]/[8]/[9]/[0] ... 原典を上下左右拡縮
+    <li>dkw選択中に[R] ... 再描画(p.retaken.datの反映)
+    <li>プルダウン選択中に[M] ... "ki","i"選択時に石井明朝設計の適用を自動生成する(未実装) → またはdumpボタンかな?
+    <li>プルダウン選択中に[E] ... エディタの起動
+    <li>プルダウン選択中に[W] ... 石井明朝設計の自動作成
+    <li>プルダウン選択中に[D] ... kosekiとdkwの比較(未実装)
+    <li>プルダウン選択中に[G] ... glyphwikiにジャンプ
+    <li>[W]が補助漢字に弱い,
+      [a][他]選択時はtext.blur()がほしい,
+      [E]でretaken展開,
+      改行が先づまりしてしまう件,
+  </span>
+</div>  
+
+</body>

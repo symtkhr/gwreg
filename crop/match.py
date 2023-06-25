@@ -124,10 +124,47 @@ def profilenum():
     # 列内の要素サイズでサンプルを縮小する
     samples = get_templates()
     print("resize", w0/15, h0/24)
-    samples = [cv2.resize(sample, None, None, w0/15, h0/24) for sample in samples]
-    return samples, (w0/15 + h0/24)/2
+    samples = [cv2.resize(sample, None, None, h0/24, h0/24) for sample in samples]
+    return samples, (h0/24)
 
 
+# 画像内でdkw番号を拾う
+def find_dkwnum():
+    samples, rate = profilenum()
+    temp0 = cv2.imread("numfont00.png")
+    temp0g = cv2.cvtColor(temp0, cv2.COLOR_BGR2GRAY)
+    w = 16
+
+    for dkw in range(21683,21822):
+#        dkw = 21737
+        digit = len(str(dkw))
+        sample = np.ones((50, w * (digit + 2)), np.uint8) * 255
+        for i in range(digit):
+            n = int(str(dkw)[i])
+            fig = temp0g[0:,n*25+1:n*25+w+1]
+            if (n == 1): fig = temp0g[0:,n*25-3:n*25+w-3]
+            sample[5:35, (i+1)*w:(i+2)*w] = fig
+
+            #rate = 0.7
+        print("rate=",rate)
+        sample = cv2.resize(sample, None, None, rate, rate)
+
+        cv2.imwrite("b.png", sample)
+        result = cv2.matchTemplate(fp["gray"], sample, cv2.TM_CCOEFF_NORMED)
+
+        img = fp["load"]
+        if (True):
+            loc = np.where(result >= 0.8)
+            for pt in zip(*loc[::-1]):
+                cv2.rectangle(img, (pt[0],pt[1]), (pt[0]+len(sample[0]),pt[1]+len(sample)), (255,0,0), 2)
+                print(pt, result[pt[1],pt[0]])
+        minVal, maxVal, minLoc, maxLoc = cv2.minMaxLoc(result)
+        pt = maxLoc
+        cv2.rectangle(img, (pt[0],pt[1]), (pt[0]+len(sample[0]),pt[1]+len(sample)), (0,0,255), 2)
+        print(dkw,maxVal, maxLoc)
+    cv2.imwrite("a.png", img)
+
+    
 # 数字をテンプレートマッチする
 def find_numbers(img = fp["gray"], samples = fp["sample"], threshold = 0.9):
     ret = []
@@ -292,6 +329,8 @@ def main(args):
 
     # 数字の位置を割り出す
     fp["gray"] = cv2.cvtColor(fp["load"], cv2.COLOR_BGR2GRAY)
+    find_dkwnum()
+    exit()
     if (rate == "auto"):
         fp["sample"], rate = profilenum()
     else:
