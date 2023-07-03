@@ -76,7 +76,9 @@ let DB = {};
         data.split("\n").forEach(function(line){
             let cols = line.split("\t");
             let dkw = cols.shift();
-            dkw = dkw.match(/dkw[0-9dh-]+/) || dkw.match(/^u[0-9a-z-]+/);
+            //dkw = dkw.match(/dkw[0-9dh-]+/) || dkw.match(/^u[0-9a-z-]+/);
+            dkw = dkw.match(/dkw[0-9dh-]+/) || dkw.match(/^u[0-9a-z-]+/)  || dkw.match(/^jmj-[0-9]+/);
+
             if (!dkw) return;
             dkw = dkw[0];
             if (!DB.regs[dkw]) DB.regs[dkw] = {};
@@ -312,6 +314,8 @@ let GUI = {};
             if ($sel.val() == "-") return;
             $reg.addClass("retaken").addClass("saved");
             if ($sel.val() == "sc") $reg.css('background-color', '#6f6');
+            if ($sel.val() == "ho") $reg.css('background-color', '#f9f');
+            if ($sel.val() == "ref") $reg.css('background-color', '#f9f');
             
             if (!$rtk.size()) $rtk = $("<span class=retaken>").prependTo($glyph);
             if (retaken[0].indexOf("[[") == 0) {

@@ -1,0 +1,63 @@
+    <style>img {width:50px; height:auto;}</style><body>
+    <div id="dump"></div>
+    <div id="pager"></div>
+    <textarea id="checklist"></textarea>
+    </body>
+    <script>
+
+
+`残登録数
+jmj-01   2154 2h u7900-7d00
+jmj-02   7594 7h u7e00-9f00
+jmj-03   7155 7h
+jmj-04   9399 9h
+jmj-05   6453 6h
+`
+      let dumps = [[[[DUMPS]]]];
+
+const $tag = (tag) => [...document.getElementsByTagName(tag)];
+const $id = (id) => document.getElementById(id);
+
+const PERPAGE = 50;
+$id("pager").innerHTML = Array(1+parseInt(dumps.length/PERPAGE)).fill(0).map((v,i)=> `<div><button>${i}</button></div>`).join(" ");
+
+      let dump = (page,$b) => {
+          let first = page * PERPAGE;
+      $b.parentNode.innerHTML =
+        dumps.slice(first,first+PERPAGE).map((row,i) => {
+
+            //if (i % 10 == 0 && i) console.log(`</p><button>Open</button><p style="display:none;">`);
+            let c, jmj, u, uiv, ksk, dkw;
+            [jmj, uiv, ksk, u] = row;
+            let ucs = uiv || u;
+            let p = [
+                "https://moji.or.jp/mojikibansearch/img/MJ/" + jmj +".png",
+                uiv && "https://glyphwiki.org/glyph/u" + uiv + ".svg",
+                ksk && "https://glyphwiki.org/glyph/koseki-" + ksk + ".svg",
+                u && "https://glyphwiki.org/glyph/u" + u + ".svg",
+            ];
+
+            let tag = p.map(u => (u ?  `<img src="${u}" />` :"_____"));
+            //(u.indexOf("glyphwiki") < 0 ? "" : `<a href="${u.split("/glyph/").join("/wiki/").split(".svg").join("")}">[g]</a>`));
+            return `<input type=checkbox id=${jmj}>` + tag.join("|") + "<br>";
+        }).join("");
+
+$tag("input").forEach($t => $t.onchange = () => {
+    console.log("change");
+    let ret = $tag("input").filter($t=>$t.checked).map($t=>$t.id);
+    localStorage.setItem("check", JSON.stringify(ret));
+    $id("checklist").innerText = JSON.stringify(ret);
+  });
+  $tag("img").forEach($i => $i.onclick = () => {
+      if ($i.src.indexOf("glyphwiki") < 0) return;
+      window.open($i.src.split("/glyph/").join("/wiki/").split(".svg").join(""));
+  });
+};
+$tag("button").forEach($b => $b.onclick = () => {
+    let s = parseInt($b.innerText);
+    dump(s,$b);
+});
+
+
+</script>
+

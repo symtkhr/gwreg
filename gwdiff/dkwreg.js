@@ -98,7 +98,7 @@ $(function() {
         data.split("\n").forEach(function(line){
             var cols = line.split("\t");
             var dkw = cols.shift();
-            dkw = dkw.match(/dkw[0-9dh-]+/) || dkw.match(/^u[0-9a-z-]+/);
+            dkw = dkw.match(/dkw[0-9dh-]+/) || dkw.match(/^u[0-9a-z-]+/)  || dkw.match(/^jmj-[0-9]+/);
             if (!dkw) return;
             dkw = dkw[0];
             if (!regs[dkw]) regs[dkw] = {};
