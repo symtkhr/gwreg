@@ -211,7 +211,7 @@ $(function() {
                   "width":BOXWIDTH + "px",
                   "height": (BOXWIDTH * 4 / 51) + "px",
                   "border":"1px solid red"});
-        var $img = $("<img>").attr("src", "../scanimg/" + src).appendTo($bar);
+        var $img = $("<img>").attr("src", "../dkwimg/" + src).appendTo($bar);
         $img.css({"top": -top + "px",
                   "left":(-scant.d.left * rate) + "px",
                   "position":"absolute",

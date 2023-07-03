@@ -1,42 +1,71 @@
-const getfile = (fname, cb) => {
-    const fs = require('fs');
-    return fs.readFileSync(fname, 'utf8');
-};
-
-console.log("<style>img {width:50px; height:auto;}</style><body>");
+const getfile = (fname, cb) => require('fs').readFileSync(fname, 'utf8');
 const { execSync } = require('child_process')
+
+console.log(`<meta charset="utf-8" /><style>
+ img {width:160px; height:auto;} a img {background:#ccc;}
+ body {width:800px;}
+ span{vertical-align: top;width: 1em; line-height:1em; height: 160px; display:inline-block; border:1px solid red;}
+</style><body>`
+);
+console.log(process.argv);
+if (process.argv.length < 3) return console.log("arg = MJ000 - MJ056");
 
 let reg = getfile("gwregdone.txt").split("\n").filter(v=>v);
 
-console.log(process.argv);
-if (process.argv.length < 3) return console.log("arg = MJ0xx | xx = 00-56");
+// find unregistered jmj
+let jmjs = execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${process.argv[2]}`)
+    .toString().split("\n").filter(v=>v).slice(0).map((row,i) => {
+        let cell = row.split(",");
+        if (reg.indexOf("jmj-"+cell[1].slice(2))!=-1) return;
+        let c, jmj, u, uiv, ksk, dkw;
+        [c, jmj, u, uiv, ksk, dkw] = cell;
+        let p = [
+            jmj,
+            uiv && "u" + uiv.split("U+").join("").split("_").join("-u").toLowerCase(),
+            ksk && "koseki-" + ksk,
+            u && "u" + u.split("U+").join("").split("_").join("-u").toLowerCase(),
+        ]
+        return p;
+    }).filter(v => v);
 
-let table = execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${process.argv.slice(2)[0]}`)// > jmjtestdata1000.txt");
-table.toString().split("\n").filter(v=>v).slice(0).map(row => {
+// find uiv/koseki name or related u
+let opt = jmjs.map(p => (p.slice(1,-1).filter(v=>v).map(v => ` -e "^ ${v}"`).join("") + ` -e "| ${p[3]}"`))
+    .filter((v,i,self)=>v && self.indexOf(v)==i).join("");
+// make pages
+let pages = execSync(`grep ${opt} dump_newest_only.txt`).toString().split("\n").map(r=>r.split("|").map(v=>v.trim()))
+    .filter(v => v[0].indexOf("_")==-1 && !v[0].match(/\-[0-9][0-9]$/) && v[1] && v[2]);
+pages.map(v => { v[2] = (v[2] && v[2].indexOf("$") < 0) && v[2].split("99:0:0:0:0:200:200:").join("="); });
 
-    let cell = row.split(",");
-    if (reg.indexOf("jmj-"+cell[1].slice(2))!=-1) return;
-    //cell.unshift("_");
-    let c, jmj, u, uiv, ksk, dkw;
-    [c, jmj, u, uiv, ksk, dkw] = cell;
-    let ucs = uiv || u;
-    let p = [
-        //"https://glyphwiki.org/glyph/jmj-" + jmj.slice(2) + ".svg",
-        "https://moji.or.jp/mojikibansearch/img/MJ/" + jmj +".png",
-        // ksk && "https://houmukyoku.moj.go.jp/KOSEKIMOJIDB/kanji-big/" + ksk + ".png",
-        uiv && "https://glyphwiki.org/glyph/u" + uiv.split("U+").join("").split("_").join("-u").toLowerCase() + ".svg",
-        ksk && "https://glyphwiki.org/glyph/koseki-" + ksk + ".svg",
-        u && "https://glyphwiki.org/glyph/u" + u.split("U+").join("").split("_").join("-u").toLowerCase() + ".svg",
-    ]
+// dump jmj candidate
+jmjs.map(cell => {
+    let jmj, u, uiv, ksk;
+    [jmj, uiv, ksk, u] = cell;
 
-    let tag = p.map(u => (u ?  `<img src="${u}" />` :"_____"));
-    //(u.indexOf("glyphwiki") < 0 ? "" : `<a href="${u.split("/glyph/").join("/wiki/").split(".svg").join("")}">[g]</a>`));
-    //tag = [];
-    console.log(`<br><input type=checkbox id=${cell[1]}>` + tag.join("|"));
+    let page = pages.filter(v => (v[1] == u && !v[2]) || (uiv && v[0] == uiv) || (ksk && v[0] == ksk));
+    // sort uiv -> koseki -> other
+    let prio = [uiv, ksk].filter(v=>v).map(key => {
+        let g = page.find(v => v[0] == key);
+        return (g[2]) ? g[2].slice(1) : key;
+    }).filter((v,i,self) => self.indexOf(v) == i);
+    let sortpage = prio.concat(page.map(v=>v[0]).filter(v => v != ksk && v!= uiv && prio.indexOf(v) == -1));
 
+    // dump images
+    let tag = sortpage.map(name => `<label>`
+                           +`<img loading="lazy" src="https://glyphwiki.org/glyph/${name}.svg" />`
+                           +`<input type=checkbox id="${jmj}_to_${name}"/>`
+                           +`</label>`);
+    // suspective parts
+    let parts = execSync(`grep ${String.fromCodePoint(parseInt(u.slice(1),16))} jmjparts.txt  | cut -d":" -f1`);
+    if (parts.length) tag.unshift("<span>" + parts.toString() + "</span>");
+    // target glyph
+    let mjpng = "https://moji.or.jp/mojikibansearch/img/MJ/" + jmj +".png";
+    tag.unshift(`<a href="https://glyphwiki.org/wiki/${u}" target="_blank"><img src="${mjpng}" /></a>`);
 
+    console.log("<br>" + tag.join(""));
 });
-    let foot = ` <textarea id="checklist"></textarea>   <script>
+
+    
+    let foot = ` <br/><textarea id="checklist"></textarea>   <script>
   const $tag = (tag) => [...document.getElementsByTagName(tag)];
   const $id = (id) => document.getElementById(id);
   let save = localStorage.getItem("check");
@@ -46,8 +75,9 @@ table.toString().split("\n").filter(v=>v).slice(0).map(row => {
       console.log("change");
       let ret = $tag("input").filter($t=>$t.checked).map($t=>$t.id);
       localStorage.setItem("check", JSON.stringify(ret));
-$id("checklist").innerText = JSON.stringify(ret);
+      $id("checklist").innerText = JSON.stringify(ret);
   });
+if(0)
   $tag("img").forEach($i => $i.onclick = () => {
       if ($i.src.indexOf("glyphwiki") < 0) return;
       window.open($i.src.split("/glyph/").join("/wiki/").split(".svg").join(""));

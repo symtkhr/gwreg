@@ -9,6 +9,7 @@ const help = (argv) => {
     console.log(argv[1] + " [Filepath] [options]");
     console.log("   convert glyphwikiupdate.csv to TSV");
     console.log(" -u: include undefined glyph");
+    console.log(" -q: include #- ");
     console.log(" -h: include #ho ");
     console.log(" -r: include #ref ");
 
@@ -28,11 +29,13 @@ let table = getfile(argv.find(v => v[0] != "-") || "p.gwupdate.dat").split('"')
     });
 
 let dump = Object.keys(regs).sort().filter(key => {
-    let no, name, c, glyph, cat, act;
-    [no, name, c, glyph, cat, act] = regs[key];
-    if (argv.indexOf("-u") < 0  && glyph == "_" && cat.indexOf("#-") == 0) return;
+    let no, name, c, glyph, cat, act, state;
+    [no, name, c, glyph, cat, act, state] = regs[key];
+    if (argv.indexOf("-u") < 0 && glyph == "_") return;
+    if (argv.indexOf("-q") < 0 && cat.indexOf("#-") == 0) return;
     if (argv.indexOf("-h") < 0 && cat.indexOf("#ho") == 0) return;
     if (argv.indexOf("-r") < 0 && cat.indexOf("#ref") == 0) return;
+    if (argv.indexOf("-o") < 0 && state != "_") return;
 
     console.log([name + c, glyph, cat, act].join("\t"));
     return true;

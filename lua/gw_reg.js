@@ -72,7 +72,7 @@ let accesswiki = function(page, glyph, c, overwrite, summ) {
         glyph = glyph0;
         summ = "関連字";
 
-    } else if (glyph0 && !toalias0) {        // 現在最新が実体である場合
+    } else if (glyph0 && !toalias0 && overwrite != "force") {        // 現在最新が実体である場合
 
         // 自分を参照しているやつらを拾い出す
         let k = execcmd(`grep '99:0:0:0:0:200:200:${page}$' ${DUMPNEWEST}`).trim().split("\n").filter(v => v);
@@ -99,15 +99,17 @@ let accesswiki = function(page, glyph, c, overwrite, summ) {
     // 参照なら概要に記載
     if (!summ && toalias) {
         summ = glyph;
+        // ToDo: その日のうちに変更した文字は対象外
         let data = execcmd(`grep '^ ${glyph.slice(2,-2)} ' ${DUMPNEWEST}`).split("|");
         let match = (data[2]||"").trim().match(/^99:0:0:0:0:200:200:([^:]+)$/);
         if (match) summ = "[[" + match[1] + "]]";
+
     }
     // 関連字
     c = c || c0;
     if (!toalias && !c) {
         // 実体にもかかわらずrelatedの指定がない場合は自動算出する
-        let _c = execcmd(`grep '^ ${toalias0[1]} ' ${DUMPNEWEST}`).split("|")[1];
+        let _c = toalias0 && execcmd(`grep '^ ${toalias0[1]} ' ${DUMPNEWEST}`).split("|")[1];
         if (!_c || _c.trim() == "u3013") return undone(`${page} no kanrenji`);
         c = ucs2c(_c.trim());
     }
@@ -126,6 +128,7 @@ let accesswiki = function(page, glyph, c, overwrite, summ) {
         cmd += ` -d 'buttons=以上の記述を完全に理解し同意したうえで投稿する'`
             + ` -b gwcookie.txt`
             + ` >> ${LOGPATH}${page}.dat`;
+
         execcmd(cmd);
         execcmd("sleep 1");
     }
@@ -199,6 +202,7 @@ let help = function() {
     console.log("    2nd column: [[u4e00-j]]      (for example of glyph data)");
     console.log("    3nd column: #a               (for example of category)");
     console.log("    4th column: (one of the following, 'isolated' by default)")
+    console.log("      - force    ; overwrite anyway");
     console.log("      - isolated ; overwrite only if alias or not referred to by other glyphs");  // overwrite
     console.log("      - alias    ; overwrite only if alias (otherwise suggest rename)"); // branch
     console.log("      - new      ; register only if new"); // onlynew
