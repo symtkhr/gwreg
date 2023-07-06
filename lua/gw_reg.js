@@ -5,6 +5,7 @@ const DUMPNEWEST = "dump_newest_only.txt";
 const LOGPATH = "./reglog/";
 const GWSITE = "https://glyphwiki.org/wiki/";
 const UNDONE_LOG  = "./reglog/0undone";
+const COOKIE = LOGPATH + "gwcookie.txt";
 
 let ucs2c = (ucs) => (ucs[0].toLowerCase() == "u")
     ? String.fromCodePoint(parseInt(ucs.slice(1),16) || 0x3013)
@@ -49,7 +50,7 @@ let accesswiki = function(page, glyph, c, overwrite, summ) {
    }
    // 入れ替えの場合
    if (overwrite == "swap") { 
-       let cmd = `curl -w '\\n '${GWSITE}/${page}?action=swap' -b gwcookie.txt `;
+       let cmd = `curl -w '\\n '${GWSITE}/${page}?action=swap' -b ${COOKIE} `;
        console.log(cmd);
        if (arg[1] == "register") execcmd(cmd);
        return;
@@ -126,7 +127,7 @@ let accesswiki = function(page, glyph, c, overwrite, summ) {
 
     if (arg[1] == "register") {
         cmd += ` -d 'buttons=以上の記述を完全に理解し同意したうえで投稿する'`
-            + ` -b gwcookie.txt`
+            + ` -b ${COOKIE}`
             + ` >> ${LOGPATH}${page}.dat`;
 
         execcmd(cmd);
@@ -145,8 +146,8 @@ let loginwiki = function() {
         + ` -d 'password=${pwd}'`
         + " -d 'returnto=Special:Userlogout'"
         + " -d 'type=login'"
-        + ` -b ${LOGPATH}gwcookie.txt`
-        + ` -c ${LOGPATH}gwcookie.txt`;
+        + ` -b ${COOKIE}`
+        + ` -c ${COOKIE}`;
     console.log(cmd);
     let t = execcmd(cmd);
     console.log(t);
