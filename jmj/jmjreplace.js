@@ -1,16 +1,25 @@
 const getfile = (fname, cb) => require('fs').readFileSync(fname, 'utf8');
 const { execSync } = require('child_process')
 
-console.log(`<meta charset="utf-8" /><style>
- img {width:160px; height:auto;} a img {background:#ccc;}
- body {width:800px;}
- span{vertical-align: top;width: 1em; line-height:1em; height: 160px; display:inline-block; border:1px solid red;}
-</style><body>`
-);
 console.log(process.argv);
 if (process.argv.length < 3) return console.log("arg = MJ000 - MJ056");
 
-let update = false;
+console.log(`<meta charset="utf-8" /><style>
+ img {width:160px; height:auto;} a img {background:#ccc;}
+ body {width:800px;}
+ img.new {background-color:#fdd; }
+ img.selected {background-color:#cfb; }
+ img.rep { border: 1px solid green; }
+ span.susp {vertical-align: top;width: 1em; line-height:1em; height: 160px; display:inline-block; border:1px solid red;}
+ span.def {display:none;}
+ span.parts img {width: 80px;}
+ li a {display:none;}
+ div {border:solid gray 1px; margin: 1px 0; }
+ span.parts span { border: 1px solid #99c; display:inline-block; vertical-align: top; font-family:monospace; width:80px; overflow-wrap: break-word; }
+</style><body><button>DUMP</button>`
+);
+
+let update = !false;
 if (update) {
     execSync(`grep " jmj-" dump_newest_only.txt |cut -d" " -f2 > gwregdone.txt`);
 }
@@ -28,26 +37,39 @@ let jmjs = execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${pro
             uiv && "u" + uiv.split("U+").join("").split("_").join("-u").toLowerCase(),
             ksk && "koseki-" + ksk,
             u && "u" + u.split("U+").join("").split("_").join("-u").toLowerCase(),
-        ]
+            dkw,
+        ];
         return p;
     }).filter(v => v);
 
-// make pages which have uiv/koseki name or related u
-let opt = jmjs.map(p => (p.slice(1,-1).filter(v=>v).map(v => ` -e "^ ${v}"`).join("") + ` -e "| ${p[3]}"`))
-    .filter((v,i,self)=>v && self.indexOf(v)==i).join("");
-let pages = execSync(`grep ${opt} dump_newest_only.txt`).toString().split("\n").map(r=>r.split("|").map(v=>v.trim()))
-    .filter(v => v[0].indexOf("_")==-1 && !v[0].match(/^u[0-9a-f]+\-[ktg]?[012][0-9]/) && v[1] && v[2]);
-pages.map(v => { v[2] = (v[2] && v[2].indexOf("$") < 0) ? v[2].split("99:0:0:0:0:200:200:").join("=") : v[2]; });
+if (jmjs.length == 0) return;
+let iskanji = (u) => (5 == u.length && "u3400" <= u && u < "ua000") || (6 == u.length && "u20000" <= u && u < "u30000");
+let gwall = getfile(`dump_newest_only.txt`).split("\n").map(r => {
+    let v = r.split("|").map(v=>v.trim())
+    if (v[2] && v[2].indexOf("99:0:0:0:0:200:200:") == 0 && v[2].indexOf("$") < 0)
+        v[2] = v[2].split("99:0:0:0:0:200:200:").join("=")
+    return v;
+}).filter(v =>
+          v[0].indexOf("_")==-1 &&
+          v[0].indexOf("itaiji") < 0 &&
+          v[0].indexOf("u2ff") != 0 && v[0].indexOf("twedu") != 0 && v[0].indexOf("cdp") != 0 &&
+          (v[0].slice(0,4) == "jmj-" || (
+              v[1] && (iskanji(v[1]) || "u3013" == v[1]) &&
+              v[2] && (v[2].slice(0,2) != "=u" || iskanji(v[2].slice(1).split("-").shift()))
+          ))
+         );
+//return console.log(gwall.find(v=>v[0]=="koseki-361390"))
 
 // dump jmj candidate
 jmjs.map(cell => {
     let jmj, u, uiv, ksk;
     [jmj, uiv, ksk, u] = cell;
 
-    let page = pages.filter(v => (v[1] == u) || (uiv && v[0] == uiv) || (ksk && v[0] == ksk));
+    let page = gwall.filter(v => (v[1] == u) || (uiv && v[0] == uiv) || (ksk && v[0] == ksk));
     // sort uiv -> koseki -> other
     let priokey = [uiv, ksk, u].filter(v=>v).shift();
     let g = page.find(v => v[0] == priokey);
+    if (!g) { console.log(priokey); return []; }
     if (g[2][0] == "=") g = page.find(v => v[0] == g[2].slice(1));
     let row = g[2].split("$").map(v => (v.slice(0,3) == "99:") ? v.split(":")[7] : false);
     //console.log(jmj, g, priokey, row);
@@ -55,63 +77,98 @@ jmjs.map(cell => {
     // make pages which have parts name or related u
     let candidates = row.map(p => {
         if (!p) return [];
+        let name = p.split("@").shift();
+        let ref = gwall.find(v => v[0] == name);
+        if (!ref) { console.log(name, ":notfound"); return []; }
+        if (ref[2][0] == "=") ref = gwall.find(v => v[0] == ref[2].slice(1));
+        let pages = gwall.filter(v => v[1] == ref[1]);
         let part = p.match(/^(u[0-9a-f]+)\-.?([012][0-9])/);
-        if (part) {
-            let opt = part[1] + '-.\\?' + part[2];
-            let pages = execSync(`grep "^ ${opt}" dump_newest_only.txt`).toString().split("\n").map(r=>r.split("|").map(v=>v.trim()))
-                .filter(v => v[0].indexOf("_") == -1 && v[1] && v[2]).map(v => v[0]);
-            return pages;
+        if (part) { // && part[2] != "07") {
+            let opt = new RegExp('^u[0-9a-f]+\-.?' + part[2]);
+            pages = pages.filter(v => opt.test(v[0]));
+            return pages;//.sort((a,b)=>a<b?1:-1);//.sort((a,b) => b-a);//a[0][0] == "u" ? -1 : b[0][0] == "u" ? 1 : 0);
         }
-        let u = p.match(/^(u[0-9a-f]+)/);
-        let related = u ? u[1] :
-            execSync(`grep "^ ${p.split("@").shift()} " dump_newest_only.txt`).toString().split("|").slice(1,2).join("").trim();
-        let pages = execSync(`grep "| ${related} " dump_newest_only.txt`).toString().split("\n").map(r=>r.split("|").map(v=>v.trim()))
-            .filter(v => v[0].indexOf("_")==-1 && !v[0].match(/^u[0-9a-f]+\-.?[012][0-9]/) && v[0].indexOf("itaiji") < 0 &&
-                    v[0].indexOf("u2ff") != 0 && v[0].indexOf("twedu") != 0 && v[0].indexOf("cdp") != 0 &&
-                    v[1] &&
-                    v[2] && (v[2].indexOf("$") != -1 || v[2].indexOf("99:0:0:0:0:200:200:") != 0)
-                   ).map(v => v[0]);
-        return pages
+        pages = pages.filter(v => !v[0].match(/^u[0-9a-f]+\-.?[012][0-9]/) && (v[2][0] != "="));
+        //console.log(pages);
+        return pages;//.sort((a,b)=>a<b?1:-1);//.sort((a,b) => b-a);//a[0][0] == "u" ? -1 : b[0][0] == "u" ? 1 : 0);
     });
+    //candidates = candidates.sort((a,b) => a[0][0] == "u" ? 1 : b[0][0] == "u" ? -1 : 0);
     //return;
-    // dump images
-    console.log("<br>", jmj, row);
-    let tag = candidates.map(
-        names => "<li>" +
-            names.map(name => `<label>`
-                      +`<img loading="lazy" src="https://glyphwiki.org/glyph/${name}.svg" />`
-                      //+`<input type=checkbox id="${jmj}_to_${name}"/>`
-                      +`</label>`).join("") + "<br>" + names.join(", ")
-    );
-    tag.unshift(`<img loading="lazy" src="https://glyphwiki.org/glyph/${priokey}.svg" />`);
+
+    // target glyph
+    let tags = [];
+    let mjpng = "https://moji.or.jp/mojikibansearch/img/MJ/" + jmj +".png";
+    tags.push(`<br/><a href="https://glyphwiki.org/wiki/${u}" target="_blank"><img src="${mjpng}" /></a>`);
     // suspective parts
     let parts = execSync(`grep ${String.fromCodePoint(parseInt(u.slice(1),16))} jmjparts.txt  | cut -d":" -f1`);
-    if (parts.length) tag.unshift("<span>" + parts.toString() + "</span>");
-    // target glyph
-    let mjpng = "https://moji.or.jp/mojikibansearch/img/MJ/" + jmj +".png";
-    tag.unshift(`<a href="https://glyphwiki.org/wiki/${u}" target="_blank"><img src="${mjpng}" /></a>`);
+    if (parts.length) tags.push("<span class=susp>" + parts.toString() + "</span>");
+    // replaced glyph
+    tags.push(`<img class="new" loading="lazy" src="https://glyphwiki.org/glyph/${priokey}.svg" />`);
+    // related glyph
+    tags.push(`<img loading="lazy" src="https://glyphwiki.org/glyph/${priokey}.svg" />`);
 
-    console.log("<br>" + tag.join(""));
+    // dump parts
+    console.log("<br><div>", jmj, row, "<span class=def>" + g[2] + "</span>");
+    tags.push(... candidates.map((names,i) => "<li>" + names.length + ": " + row[i] +
+                                 names.map(v=>`<a>${v[0]}</a>`).join("*") + `<span class="parts"><br/></span>`));
+    console.log(tags.join("") + "</div>");
 });
 
-    
     let foot = ` <br/><textarea id="checklist"></textarea>   <script>
-  const $tag = (tag) => [...document.getElementsByTagName(tag)];
-  const $id = (id) => document.getElementById(id);
-  let save = localStorage.getItem("check");
-  if (save)  JSON.parse(save).map(v => { console.log(v);if($id(v)) $id(v).checked = true; });
+   const $tag = (tag,$dom) => [...($dom || document).getElementsByTagName(tag)];
+   const $c = (name,$dom) => [...($dom || document).getElementsByClassName(name)];
+   const $id = (id) => document.getElementById(id);
+   $id("checklist").innerText = localStorage.getItem("check");
 
-  $tag("input").forEach($t => $t.onchange = () => {
-      console.log("change");
-      let ret = $tag("input").filter($t=>$t.checked).map($t=>$t.id);
-      localStorage.setItem("check", JSON.stringify(ret));
-      $id("checklist").innerText = JSON.stringify(ret);
-  });
-if(0)
-  $tag("img").forEach($i => $i.onclick = () => {
-      if ($i.src.indexOf("glyphwiki") < 0) return;
-      window.open($i.src.split("/glyph/").join("/wiki/").split(".svg").join(""));
-  });
+   $tag("li").forEach($li => $li.onclick = () => {
+       if ($tag("img", $li).length) return;
+       let $parts = $c("parts", $li)[0];
+       $parts.innerHTML = "<br/>" + $tag("a", $li).map($a => {
+           let name = $a.innerText;
+           return "<span><img src='https://glyphwiki.org/glyph/" + name +".svg'/><br/>"
+               +"<span class=gw>" + name + "</span>"
+               +"</span>";
+       }).join("");
+
+       $c("gw", $li).forEach($a => $a.onclick = () => window.open("https://glyphwiki.org/wiki/" +$a.innerText));
+
+       $tag("img", $li).forEach($i => $i.onclick = () => {
+           $i.classList.toggle("selected");
+           let $div = $li.parentNode;
+           let $def = $c("def", $div)[0];
+           let original = $def.innerText.split("$");
+           let reps = $c("selected", $div).map($i => {
+               let $li = $i.parentNode.parentNode.parentNode;
+               let index = $tag("li", $div).indexOf($li);
+               return [index, $i.src.split("/").pop().split(".").shift()];
+           });
+           let glyph = original.map((v,i) => {
+               let part = reps.find(r=>r[0]==i);
+               if (!part) return v.replace(/@[0-9]+/,"");
+               let c = v.split(":");
+               c[7] = part[1];
+               return c.join(":");
+           }).filter(v=>v!="0:0:0:0").join("$");
+
+           let $glyph = $c("new", $div)[0];
+           if (reps.length)
+               $glyph.classList.add("rep");
+           else
+               $glyph.classList.remove("rep");
+           $glyph.id = $div.innerText.match(/MJ[0-9]+/)[0];
+           $glyph.src = "https://glyphwiki.org/get_preview_glyph.cgi?data=" + glyph;
+           console.log(glyph);
+       });
+   });
+   $c("new").map($i => $i.onclick = () => {
+       if (!$i.id) return;
+       $i.classList.toggle("rep");
+       let ret = $c("rep").map($i => [$i.id,$i.src]);
+       ret = JSON.stringify(ret);
+       $id("checklist").innerText = ret;
+       localStorage.setItem("check", ret);
+       console.log(ret);
+   });
 </script>
 `
     console.log(foot);
