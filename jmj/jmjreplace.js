@@ -67,20 +67,28 @@ jmjs.map(cell => {
 
     let page = gwall.filter(v => (v[1] == u) || (uiv && v[0] == uiv) || (ksk && v[0] == ksk));
     // sort uiv -> koseki -> other
+    let prio = [uiv, ksk].filter(v=>v).map(key => {
+        let g = page.find(v => v[0] == key);
+        if (!g) return;
+        return (g[2][0] == "=") ? g[2].slice(1) : key;
+    }).filter((v,i,self) => v && self.indexOf(v) == i);
+    let sortpage = prio.concat(page.map(v=>v[0]).filter(v => v != ksk && v!= uiv && prio.indexOf(v) == -1));
+
+    // find daihyo
     let priokey = [uiv, ksk, u].filter(v=>v).shift();
     let g = page.find(v => v[0] == priokey);
     if (!g) { console.log(priokey); return []; }
     if (g[2][0] == "=") g = page.find(v => v[0] == g[2].slice(1));
     let row = g[2].split("$").map(v => (v.slice(0,3) == "99:") ? v.split(":")[7] : false);
-    //console.log(jmj, g, priokey, row);
 
     // make pages which have parts name or related u
-    let candidates = row.map(p => {
+    let candidates = row.map((p,i) => {
         if (!p) return [];
         let name = p.split("@").shift();
         let ref = gwall.find(v => v[0] == name);
         if (!ref) { console.log(name, ":notfound"); return []; }
         if (ref[2][0] == "=") ref = gwall.find(v => v[0] == ref[2].slice(1));
+        row[i] += "[" + String.fromCodePoint(parseInt(ref[1].slice(1),16)) + "]";
         let pages = gwall.filter(v => v[1] == ref[1]);
         let part = p.match(/^(u[0-9a-f]+)\-.?([012][0-9])/);
         if (part) { // && part[2] != "07") {
@@ -105,10 +113,10 @@ jmjs.map(cell => {
     // replaced glyph
     tags.push(`<img class="new" loading="lazy" src="https://glyphwiki.org/glyph/${priokey}.svg" />`);
     // related glyph
-    tags.push(`<img loading="lazy" src="https://glyphwiki.org/glyph/${priokey}.svg" />`);
+    sortpage.forEach(name => tags.push(`<img loading="lazy" src="https://glyphwiki.org/glyph/${name}.svg" />`));
 
     // dump parts
-    console.log("<br><div>", jmj, row, "<span class=def>" + g[2] + "</span>");
+    console.log("<br><div>", jmj, "<span class=def>" + g[2] + "</span>");
     tags.push(... candidates.map((names,i) => "<li>" + names.length + ": " + row[i] +
                                  names.map(v=>`<a>${v[0]}</a>`).join("*") + `<span class="parts"><br/></span>`));
     console.log(tags.join("") + "</div>");
