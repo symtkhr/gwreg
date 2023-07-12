@@ -4,26 +4,13 @@ const { execSync } = require('child_process')
 console.log(process.argv);
 if (process.argv.length < 3) return console.log("arg = MJ000 - MJ056");
 
-console.log(`<meta charset="utf-8" /><style>
- img {width:160px; height:auto;} a img {background:#ccc;}
- body {width:800px;}
- img.new {background-color:#fdd; }
- img.selected {background-color:#cfb; }
- img.rep { border: 1px solid green; }
- span.susp {vertical-align: top;width: 1em; line-height:1em; height: 160px; display:inline-block; border:1px solid red;}
- span.def {display:none;}
- span.parts img {width: 80px;}
- li a {display:none;}
- div {border:solid gray 1px; margin: 1px 0; }
- span.parts span { border: 1px solid #99c; display:inline-block; vertical-align: top; font-family:monospace; width:80px; overflow-wrap: break-word; }
-</style><body><button>DUMP</button>`
-);
-
+console.log(getfile("jmjrepformat.htm"));
 let update = !false;
 if (update) {
     execSync(`grep " jmj-" dump_newest_only.txt |cut -d" " -f2 > gwregdone.txt`);
 }
 let reg = getfile("gwregdone.txt").split("\n").filter(v=>v);
+
 
 // find unregistered jmj
 let jmjs = execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${process.argv[2]}`)
@@ -122,65 +109,7 @@ jmjs.map(cell => {
     console.log(tags.join("") + "</div>");
 });
 
-    let foot = ` <br/><textarea id="checklist"></textarea>   <script>
-   const $tag = (tag,$dom) => [...($dom || document).getElementsByTagName(tag)];
-   const $c = (name,$dom) => [...($dom || document).getElementsByClassName(name)];
-   const $id = (id) => document.getElementById(id);
-   $id("checklist").innerText = localStorage.getItem("check");
-
-   $tag("li").forEach($li => $li.onclick = () => {
-       if ($tag("img", $li).length) return;
-       let $parts = $c("parts", $li)[0];
-       $parts.innerHTML = "<br/>" + $tag("a", $li).map($a => {
-           let name = $a.innerText;
-           return "<span><img src='https://glyphwiki.org/glyph/" + name +".svg'/><br/>"
-               +"<span class=gw>" + name + "</span>"
-               +"</span>";
-       }).join("");
-
-       $c("gw", $li).forEach($a => $a.onclick = () => window.open("https://glyphwiki.org/wiki/" +$a.innerText));
-
-       $tag("img", $li).forEach($i => $i.onclick = () => {
-           $i.classList.toggle("selected");
-           let $div = $li.parentNode;
-           let $def = $c("def", $div)[0];
-           let original = $def.innerText.split("$");
-           let reps = $c("selected", $div).map($i => {
-               let $li = $i.parentNode.parentNode.parentNode;
-               let index = $tag("li", $div).indexOf($li);
-               return [index, $i.src.split("/").pop().split(".").shift()];
-           });
-           let glyph = original.map((v,i) => {
-               let part = reps.find(r=>r[0]==i);
-               if (!part) return v.replace(/@[0-9]+/,"");
-               let c = v.split(":");
-               c[7] = part[1];
-               return c.join(":");
-           }).filter(v=>v!="0:0:0:0").join("$");
-
-           let $glyph = $c("new", $div)[0];
-           if (reps.length)
-               $glyph.classList.add("rep");
-           else
-               $glyph.classList.remove("rep");
-           $glyph.id = $div.innerText.match(/MJ[0-9]+/)[0];
-           $glyph.src = "https://glyphwiki.org/get_preview_glyph.cgi?data=" + glyph;
-           console.log(glyph);
-       });
-   });
-   $c("new").map($i => $i.onclick = () => {
-       if (!$i.id) return;
-       $i.classList.toggle("rep");
-       let ret = $c("rep").map($i => [$i.id,$i.src]);
-       ret = JSON.stringify(ret);
-       $id("checklist").innerText = ret;
-       localStorage.setItem("check", ret);
-       console.log(ret);
-   });
-</script>
-`
-    console.log(foot);
-
+console.log(` <br/><textarea id="checklist"></textarea>`);
 
 `残登録数
 jmj-01   2154 2h u7900-7d00

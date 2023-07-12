@@ -158,8 +158,8 @@ let loginwiki = function() {
 
 //版4: reg.datのとおりに登録する
 let pickups = function(buff) {
-    let dkws, glyph, cat, ow, dkw, c;
-    [dkws, glyph, cat, ow] = buff.split("\t");
+    let dkws, glyph, cat, ow, dkw, c, remark;
+    [dkws, glyph, cat, ow, remark] = buff.split("\t");
     if (!dkws) return;
     [dkw, c] = dkws.split("[");
     c = (c || "").split("]")[0];
@@ -185,7 +185,7 @@ let pickups = function(buff) {
         let message = `${dkw} as undef ` + cat;
         return undone(message);
     }
-    accesswiki(dkw, glyph, c, ow, cat.match("Revert") && cat.split(":").pop().trim());
+    accesswiki(dkw, glyph, c, ow, remark || cat.match("Revert") && cat.split(":").pop().trim());
 }
 
 let help = function() {

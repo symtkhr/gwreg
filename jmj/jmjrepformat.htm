@@ -1,0 +1,80 @@
+[ '/usr/bin/node',
+  '/home/mt-nest/public_html/gwiki/jmj/jmjreplace.js',
+  'MJ0370' ]
+<meta charset="utf-8" /><style>
+ img {width:160px; height:auto;} a img {background:#ccc;}
+ body {width:800px;}
+ img.new {background-color:#fdd; }
+ img.selected {background-color:#cfb; }
+ img.rep { border: 1px solid green; }
+ span.susp {vertical-align: top;width: 1em; line-height:1em; height: 160px; display:inline-block; border:1px solid red;}
+ span.def {display:none;}
+ span.parts img {width: 80px;}
+ li a {display:none;}
+ div {border:solid gray 1px; margin: 1px 0; }
+ span.parts span { border: 1px solid #99c; display:inline-block; vertical-align: top; font-family:monospace; width:80px; overflow-wrap: break-word; }
+</style><script>window.onload = () => {
+   const $tag = (tag,$dom) => [...($dom || document).getElementsByTagName(tag)];
+   const $c = (name,$dom) => [...($dom || document).getElementsByClassName(name)];
+   const $id = (id) => document.getElementById(id);
+   $id("checklist").innerText = localStorage.getItem("check");
+
+   const freq = ["jmj-007636","jmj-010159","jmj-010850","jmj-011074","jmj-011890","jmj-024975","jmj-030297","nyukan-f115","u24514-var-001","u26407-jv","u264d4-02","u2652e-var-003","u2696f-03-var-001","u34de-03","u3687-02-var-003","u3687-var-004","u3b05-var-003","u4592-01-var-001","u4e0d-02-var-001","u4e0d-g","u4e0d-g02","u4e0d-g03","u4e15-01-var-002","u4e15-g02","u4e42-g","u4e4f-var-002","u4ea4-j","u4faf-g","u4fdd-k","u5141-var-001","u5143-g","u5144-g02","u5145-02-var-002","u5145-var-004","u5148-02","u5149-g02","u514c-02-var-002","u514c-var-002","u5152-g02","u517c-01-var-002","u517c-02-var-004","u517c-var-001","u518f-k","u51a5-var-001","u51fd-t","u5357-02-var-001","u5374-02-var-001","u53bb-01-var-001","u53bb-02-var-001","u53bb-var-001","u53c3-var-001","u53c3-var-005","u53c8-02-var-002","u53c8-04","u53c8-j","u53d2-03-var-002","u53d4-08-var-001","u53d4-var-003","u53d6-j","u53d6-var-013","u53df-02-var-001","u5426-g","u542b-01-var-002","u542b-ue0100","u5446-var-001","u557b-var-002","u56da-g","u56e0-g","u5774-02-var-001","u5794-01-var-001","u57f6-k","u57f6-var-003","u5802-g02","u582f-g","u582f-g02","u582f-t","u585e-j","u5875-var-001","u58fd-var-003","u590a-t04","u590b-02-var-005","u590b-02-var-009","u590b-var-004","u590c-02-var-002","u590d-02-var-002","u590d-02-var-004","u590f-var-001","u595a-01-var-002","u5960-var-003","u5967-07-var-001","u5967-j","u59d4-01-var-001","u5b5d-var-001","u5bb3-var-006","u5c03-02-var-005","u5c0a-var-005","u5c6c-var-002","u5dc2-var-003","u5de8-j","u5dee-j","u5e1a-var-002","u5e1b-g02","u5e1b-var-001","u5e1d-08-var-001","u5e1d-var-001","u5e1d-var-002","u5e36-g","u5e7e-02-var-003","u5e7f-j","u5ec9-02-var-002","u5ecc-var-002","u5ef7-j","u5f37-j","u5f57-j","u5f99-var-001","u5fa9-var-003","u5fa9-var-004","u611b-02-var-001","u611b-ue0101","u616e-var-002","u6182-02-var-001","u61b2-ue0105","u621a-02-var-002","u6536-k","u6556-02-var-003","u6556-03-var-003","u6556-var-005","u656b-var-002","u65b9-01-var-001","u65b9-02-var-002","u65b9-var-001","u65bc-02-var-002","u65bc-var-001","u65bc-var-003","u65bd-k","u65bf-var-001","u65c1-02-var-002","u65c1-02-var-003","u65c1-ue0102","u65cb-02-var-001","u65cb-var-001","u65cf-02-var-001","u65cf-var-001","u65e3-var-001","u6613-02-var-001","u6613-var-001","u66f7-02-var-003","u66f7-02-var-009","u66f7-var-004","u66f7-var-005","u66f8","u6700-var-003","u6772-var-001","u67bc-02-var-001","u68e0-02-var-001","u6b20-02-var-002","u6b20-k","u6b2e-jv","u6b47-var-004","u6b65-02-var-001","u6b7b-g","u6de9-var-001","u7070-var-002","u723b-g","u74dc-02","u74e6-02-var-004","u74e6-02-var-005","u755f-02-var-003","u7562-var-011","u7562-var-013","u7570-var-003","u758f-var-003","u7676-03-var-003","u7678-var-001","u7679-02-var-002","u767b-04-var-001","u767b-08-var-001","u767c-02-var-002","u7683-02-var-001","u76ca-var-004","u76cd-j","u76e7-var-001","u76fe-var-002","u7758-02-var-003","u79b9-var-001","u79bb-02-var-005","u79e6-02","u7a74-03","u7a7a-var-004","u7a81-ue0101","u7a92-var-006","u7aa1","u7aae","u7b97-03-var-001","u7f8c-02-var-002","u8001-04-var-003","u8001-h03","u8001-var-001","u8006-02-var-001","u810a-var-001","u81f3-02-var-003","u8207-03-var-001","u8207-var-001","u83ab-03-var-006","u83d0-02","u83d0-02-var-002","u83ef-var-002","u8449-02-var-003","u845b-02-var-001","u845b-ue0108","u84cb-k","u864d-05-var-007","u864d-10-var-008","u864e-01-var-001","u864e-02-var-001","u864e-05-var-002","u864e-var-005","u8650-ue0102","u8650-var-001","u8652-02-var-002","u8652-var-001","u8656-02-var-002","u8658-var-001","u8700-02-var-001","u8700-07-var-002","u8700-var-001","u8881-02-var-001","u898b-02-var-003","u898b-04-var-001","u898b-g","u898b-g02","u898b-h02","u898f-g","u8993-02-var-001","u89a7-02-var-001","u8c66-var-002","u8c8c-g","u8d66-k","u8d70-02-var-001","u8d70-v05","u8d70-v10","u9006-k","u9149-01-var-010","u9149-g01","u914b-var-010","u91d2-01","u9577-04-var-001","u95cc-g","u961c-g","u9675-ue0102","u96e2-var-002","u96e2-var-003","u96e8-03","u9700-j","u975e-02-var-001","u975e-var-001","u9761-var-001","u97cb-08-var-004","u97cb-08-var-009","u97cb-08-var-010","u983b-var-001","u9b32-var-005","u9b3c-02-var-005","u9b3c-05-var-004","u9b3c-var-002","u9b4f-var-001","u9e7f-var-002","u9e83-var-002","u9ece-var-001","uf91f-k","uf936-var-003"];
+   
+   $tag("li").forEach($li => $li.onclick = () => {
+       if ($tag("img", $li).length) return;
+       let $parts = $c("parts", $li)[0];
+       $parts.innerHTML = "<br/>" + $tag("a", $li).map($a => {
+           let name = $a.innerText;
+           return "<span><img src='https://glyphwiki.org/glyph/" + name +".svg'/><br/>"
+               +"<span class=gw>" + name + "</span>"
+               +"</span>";
+       }).join("");
+
+       $c("gw", $li).forEach($a => $a.onclick = () => window.open("https://glyphwiki.org/wiki/" +$a.innerText));
+
+       $tag("img", $li).forEach($i => $i.onclick = () => {
+           $i.classList.toggle("selected");
+           let $div = $li.parentNode;
+           let $def = $c("def", $div)[0];
+           let original = $def.innerText.split("$");
+           let reps = $c("selected", $div).map($i => {
+               let $li = $i.parentNode.parentNode.parentNode;
+               let index = $tag("li", $div).indexOf($li);
+               return [index, $i.src.split("/").pop().split(".").shift()];
+           });
+           let glyph = original.map((v,i) => {
+               let part = reps.find(r=>r[0]==i);
+               if (!part) return v.replace(/@[0-9]+/,"");
+               let c = v.split(":");
+               c[7] = part[1];
+               return c.join(":");
+           }).filter(v=>v!="0:0:0:0").join("$");
+
+           let $glyph = $c("new", $div)[0];
+           if (reps.length)
+               $glyph.classList.add("rep");
+           else
+               $glyph.classList.remove("rep");
+           $glyph.id = $div.innerText.match(/MJ[0-9]+/)[0];
+           $glyph.src = "https://glyphwiki.org/get_preview_glyph.cgi?data=" + glyph;
+           console.log(glyph);
+       });
+       $tag("img", $li).forEach($i => {
+           if (freq.indexOf($i.src.split("/").pop().split(".").shift()) != -1)
+               $i.onclick();
+       });
+   });
+   $c("new").map($i => $i.onclick = () => {
+       if (!$i.id) return;
+       $i.classList.toggle("rep");
+       let ret = $c("rep").map($i => [$i.id,$i.src]);
+       ret = JSON.stringify(ret);
+       $id("checklist").innerText = ret;
+       localStorage.setItem("check", ret);
+       console.log(ret);
+   });
+
+}
+   </script>
+<body>
