@@ -39,7 +39,7 @@ let diff = toreg.map(v => {
 if (mode == "stat") {
     let stat = {};
     diff.forEach(v => v[1] && v[1].map(gl => stat[gl] = (stat[gl] || 0) + 1));
-    let stat0 = Object.keys(stat).filter(key => 1 < stat[key]).sort((a,b)=> stat[a] - stat[b]);//.map(key => console.log(key, stat[key]));
+    let stat0 = Object.keys(stat).filter(key => stat[key]).sort((a,b)=> stat[a] - stat[b]);//.map(key => console.log(key, stat[key]));
     return console.log(JSON.stringify(stat0.sort()));
 }
 

@@ -39,7 +39,12 @@ let gwall = getfile(`dump_newest_only.txt`).split("\n").map(r => {
 }).filter(v =>
           v[0].indexOf("_")==-1 &&
           v[0].indexOf("itaiji") < 0 &&
-          v[0].indexOf("u2ff") != 0 && v[0].indexOf("twedu") != 0 && v[0].indexOf("cdp") != 0 &&
+          //v[0].indexOf("u2ff") != 0 &&
+          v[0].indexOf("qin") != 0 &&
+          v[0].indexOf("pinyin") != 0 &&
+          v[0].indexOf("kumimoji") != 0 &&
+          v[0].indexOf("hitsujun") != 0 &&
+          v[0].indexOf("twedu") != 0 && v[0].indexOf("cdp") != 0 &&
           (v[0].slice(0,4) == "jmj-" || (
               v[1] && (iskanji(v[1]) || "u3013" == v[1]) &&
               v[2] && (v[2].slice(0,2) != "=u" || iskanji(v[2].slice(1).split("-").shift()))
@@ -75,8 +80,10 @@ jmjs.map(cell => {
         let ref = gwall.find(v => v[0] == name);
         if (!ref) { console.log(name, ":notfound"); return []; }
         if (ref[2][0] == "=") ref = gwall.find(v => v[0] == ref[2].slice(1));
+        if (!ref) { console.log(name, ":notfound"); return []; }
         row[i] += "[" + String.fromCodePoint(parseInt(ref[1].slice(1),16)) + "]";
-        let pages = gwall.filter(v => v[1] == ref[1]);
+        let pages = ref[1] == "u3013" ? gwall.filter(v => !v[0].indexOf(ref[0]) || !ref[0].indexOf(v[0]))
+            : gwall.filter(v => v[1] == ref[1]);
         let part = p.match(/^(u[0-9a-f]+)\-.?([012][0-9])/);
         if (part) { // && part[2] != "07") {
             let opt = new RegExp('^u[0-9a-f]+\-.?' + part[2]);
@@ -92,18 +99,20 @@ jmjs.map(cell => {
 
     // target glyph
     let tags = [];
+    tags.push("<br><div>");
+    tags.push(`<a href="https://glyphwiki.org/wiki/${u}" target="_blank">${jmj}</a>`);
+    tags.push("<span class=def>" + g[2] + "</span>");
     let mjpng = "https://moji.or.jp/mojikibansearch/img/MJ/" + jmj +".png";
-    tags.push(`<br/><a href="https://glyphwiki.org/wiki/${u}" target="_blank"><img src="${mjpng}" /></a>`);
+    tags.push(`<br/><img class=mj src="${mjpng}" /></a>`);
     // suspective parts
     let parts = execSync(`grep ${String.fromCodePoint(parseInt(u.slice(1),16))} jmjparts.txt  | cut -d":" -f1`);
     if (parts.length) tags.push("<span class=susp>" + parts.toString() + "</span>");
     // replaced glyph
     tags.push(`<img class="new" loading="lazy" src="https://glyphwiki.org/glyph/${priokey}.svg" />`);
     // related glyph
-    sortpage.forEach(name => tags.push(`<img loading="lazy" src="https://glyphwiki.org/glyph/${name}.svg" />`));
+    sortpage.forEach(name => tags.push(`<img class=gw loading="lazy" src="https://glyphwiki.org/glyph/${name}.svg" />`));
 
     // dump parts
-    console.log("<br><div>", jmj, "<span class=def>" + g[2] + "</span>");
     tags.push(... candidates.map((names,i) => "<li>" + names.length + ": " + row[i] +
                                  names.map(v=>`<a>${v[0]}</a>`).join("*") + `<span class="parts"><br/></span>`));
     console.log(tags.join("") + "</div>");
