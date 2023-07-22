@@ -8,17 +8,17 @@ console.log(`<meta charset="utf-8" /><style>
 </style><body>`
 );
 console.log(process.argv);
-if (process.argv.length < 3) return console.log("arg = MJ000 - MJ056");
+if (process.argv.length < 3) return console.log("arg = MJ000 - MJ056\n -u: update gwregdone.txt \n -d: dump undone glyphs");
 
-let update = false;
+let update = process.argv.indexOf("-u") != -1;
 if (update) {
     execSync(`grep " jmj-" dump_newest_only.txt |cut -d" " -f2 > gwregdone.txt`);
 }
 let reg = getfile("gwregdone.txt").split("\n").filter(v=>v);
 
 // find unregistered jmj
-let jmjs = execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${process.argv[2]}`)
-    .toString().split("\n").filter(v=>v).slice(0).map((row,i) => {
+execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${process.argv[2]} > tmp.mji.dat`)
+let jmjs = getfile("tmp.mji.dat").split("\n").filter(v=>v).map((row,i) => {
         let cell = row.split(",");
         if (reg.indexOf("jmj-"+cell[1].slice(2))!=-1) return;
         let c, jmj, u, uiv, ksk, dkw;
@@ -31,6 +31,11 @@ let jmjs = execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${pro
         ]
         return p;
     }).filter(v => v);
+
+if (process.argv.indexOf("-d") != -1) {
+    jmjs.map(v => console.log(v));
+    return jmjs;
+}
 
 // find uiv/koseki name or related u
 let opt = jmjs.map(p => (p.slice(1,-1).filter(v=>v).map(v => ` -e "^ ${v}"`).join("") + ` -e "| ${p[3]}"`))

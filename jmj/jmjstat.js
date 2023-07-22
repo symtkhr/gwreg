@@ -7,7 +7,7 @@ const mode = process.argv[2];
 const tsvfile = process.argv[3];
 
 let origin = execSync("grep class=def done/rtest*.htm").toString().split("\n").map(v=> {
-    let name = v.match(/MJ[0-9]+ /);
+    let name = v.match(/MJ[0-9]+/);
     let glyph = v.split("class=def").pop();
     return [name && name[0].trim(), glyph];
 }).filter(v => v[0]).map(g => {
@@ -18,11 +18,12 @@ let origin = execSync("grep class=def done/rtest*.htm").toString().split("\n").m
     });
     return g;
 });
-//origin.map(v => console.log(v));
+//return origin.map(v => console.log(v));
 let toreg = getfile(tsvfile).split("\n").map(v => v.split("\t")).filter(v => v && v[1]);
 let diff = toreg.map(v => {
     let jmj, glyph;
     [jmj, glyph] = v;
+    jmj = jmj.split("[").shift();
     let mj = jmj.split("jmj-").join("MJ");
     let base = origin.find(v => v[0] == mj);
     if (!base || !base[1]) return [jmj]; //console.log(jmj, "<nobase>"); 
@@ -47,13 +48,16 @@ if (mode == "compl") {
     toreg.map(v => {
         let jmj, glyph, type, action, stat, remark;
         [jmj, glyph, type, action, stat, remark] = v;
+        jmj = jmj.split("[").shift();
         glyph = glyph.split("$").map(v => v.replace(/@[0-9]+/,"")).join("$");
         let using = diff.find(v => v[0] == jmj);
-        if (using && using[1]) remark = ("Using " + using[1].filter((v,i,self) => self.indexOf(v) == i).join(" & "))
-        let jmjs = execSync(`grep ${jmj.split("jmj-").join("MJ") } ../tables/mji.00601.csv | cut -d, -f2,3,4,6,8,30`);
-        let ref = jmjs.toString().split(",")[2];
-        jmj += "[" + String.fromCodePoint(parseInt(ref.slice(1),16)) + "]";
-        console.log([jmj, glyph, type, action, stat, remark].join("\t"));
+        if (using && using[1] && using.length) remark = ("Using " + using[1].filter((v,i,self) => self.indexOf(v) == i).join(" "))
+        //console.log(`grep ${ jmj.split("jmj-").join("MJ") } ../tables/mji.00601.csv | cut -d, -f2,3,4,6,8,30`);
+        let jmjs = execSync(`grep ${ jmj.split("jmj-").join("MJ") } ../tables/mji.00601.csv | cut -d, -f2,3,4,6,8,30`);
+        let ref = jmjs.toString().split(",")[2] || "u3013";
+        c = String.fromCodePoint(parseInt(ref.slice(1),16));
+        jmj += "[" + c + "]";
+        console.log([jmj, glyph, type, action, remark].join("\t"));
     });
 }
 

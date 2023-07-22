@@ -36,8 +36,9 @@ let dump = Object.keys(regs).sort().filter(key => {
     if (argv.indexOf("-h") < 0 && cat.indexOf("#ho") == 0) return;
     if (argv.indexOf("-r") < 0 && cat.indexOf("#ref") == 0) return;
     if (argv.indexOf("-o") < 0 && state != "_") return;
+    c = c.split("[").join("").split("]").join("");
 
-    console.log([name + c, glyph, cat, act].join("\t"));
+    console.log([name + "[" + c + "]", glyph, cat, act].join("\t"));
     return true;
 });
 console.log(dump.length, table.length);

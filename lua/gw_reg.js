@@ -110,9 +110,14 @@ let accesswiki = function(page, glyph, c, overwrite, summ) {
     c = c || c0;
     if (!toalias && !c) {
         // 実体にもかかわらずrelatedの指定がない場合は自動算出する
-        let _c = toalias0 && execcmd(`grep '^ ${toalias0[1]} ' ${DUMPNEWEST}`).split("|")[1];
-        if (!_c || _c.trim() == "u3013") return undone(`${page} no kanrenji`);
-        c = ucs2c(_c.trim());
+        let m = page.match(/u[0-9a-f]+/);
+        if (m) {
+            c = ucs2c(m[0]);
+        } else {
+            let _c = toalias0 && execcmd(`grep '^ ${toalias0[1]} ' ${DUMPNEWEST}`).split("|")[1];
+            if (!_c || _c.trim() == "u3013") return undone(`${page} no kanrenji`);
+            c = ucs2c(_c.trim());
+        }
     }
 
     let timestamp = parseInt(Date.now()/1000);

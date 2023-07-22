@@ -5,7 +5,7 @@ console.log(process.argv);
 if (process.argv.length < 3) return console.log("arg = MJ000 - MJ056");
 
 console.log(getfile("jmjrepformat.htm"));
-let update = !false;
+let update = process.argv.indexOf("-u") != -1;
 if (update) {
     execSync(`grep " jmj-" dump_newest_only.txt |cut -d" " -f2 > gwregdone.txt`);
 }
@@ -39,7 +39,7 @@ let gwall = getfile(`dump_newest_only.txt`).split("\n").map(r => {
 }).filter(v =>
           v[0].indexOf("_")==-1 &&
           v[0].indexOf("itaiji") < 0 &&
-          //v[0].indexOf("u2ff") != 0 &&
+          v[0].indexOf("u2ff") != 0 &&
           v[0].indexOf("qin") != 0 &&
           v[0].indexOf("pinyin") != 0 &&
           v[0].indexOf("kumimoji") != 0 &&
