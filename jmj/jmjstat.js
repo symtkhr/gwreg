@@ -19,10 +19,11 @@ let origin = execSync("grep class=def done/rtest*.htm").toString().split("\n").m
     return g;
 });
 //return origin.map(v => console.log(v));
-let toreg = getfile(tsvfile).split("\n").map(v => v.split("\t")).filter(v => v && v[1]);
+let toreg = getfile(tsvfile).split("\n").map(v => v.split("\t")).filter(v => v && v[0]);
 let diff = toreg.map(v => {
     let jmj, glyph;
     [jmj, glyph] = v;
+    if (!glyph) return [jmj];
     jmj = jmj.split("[").shift();
     let mj = jmj.split("jmj-").join("MJ");
     let base = origin.find(v => v[0] == mj);
@@ -45,17 +46,32 @@ if (mode == "stat") {
 }
 
 if (mode == "compl") {
-    toreg.map(v => {
+    toreg.slice(0).map(v => {
         let jmj, glyph, type, action, stat, remark;
         [jmj, glyph, type, action, stat, remark] = v;
         jmj = jmj.split("[").shift();
         glyph = glyph.split("$").map(v => v.replace(/@[0-9]+/,"")).join("$");
         let using = diff.find(v => v[0] == jmj);
-        if (using && using[1] && using.length) remark = ("Using " + using[1].filter((v,i,self) => self.indexOf(v) == i).join(" "))
+        if (using && using[1] && using[1].length) remark = ("Using " + using[1].filter((v,i,self) => self.indexOf(v) == i).join(" "))
         //console.log(`grep ${ jmj.split("jmj-").join("MJ") } ../tables/mji.00601.csv | cut -d, -f2,3,4,6,8,30`);
-        let jmjs = execSync(`grep ${ jmj.split("jmj-").join("MJ") } ../tables/mji.00601.csv | cut -d, -f2,3,4,6,8,30`);
-        let ref = jmjs.toString().split(",")[2] || "u3013";
-        c = String.fromCodePoint(parseInt(ref.slice(1),16));
+        let c = "";
+        if (jmj.slice(0,3) == "jmj") {
+            let jmjs = execSync(`grep ${ jmj.split("jmj-").join("MJ") } ../tables/mji.00601.csv | cut -d, -f2,3,4,6,8,30`);
+            let ref = jmjs.toString().split(",")[2] || "u3013";
+            c = String.fromCodePoint(parseInt(ref.slice(1),16));
+        } else {
+            jmj = jmj.replace(/[^!-~]+/, v => v.codePointAt(0).toString(16));
+            if (0 < jmj.indexOf("~")) {
+                let base = jmj.split("~").shift();
+                if (base.slice(-1)=="-") base = base.slice(0,-1);
+                let vars = execSync(`grep ' ${ jmj.split("~").shift() }-var-' ./dump_newest_only.txt; true`).toString();
+                let n = vars.split("\n").filter(v=>v).length;
+                jmj = jmj.split("~").shift() + "-var-" + ("000" + (n + 1)).slice(-3);
+                c = vars.split("|")[1] || jmj.match(/^u[0-9a-f]+/)[0];
+                //console.log(c,vars.split("|")[1]);
+                c = String.fromCodePoint(parseInt(c.trim().slice(1),16));
+            }
+        }
         jmj += "[" + c + "]";
         console.log([jmj, glyph, type, action, remark].join("\t"));
     });
@@ -87,11 +103,19 @@ img.selected { border:1px solid red; }
 `);
 
     toreg.slice(0).map(v => {
-        let jmj, glyph, type, action, stat, remark;
-        [jmj, glyph, type, action, stat, remark] = v;
-        console.log("<hr>",jmj);
-        console.log(`<img loading="lazy" src="https://moji.or.jp/mojikibansearch/img/MJ/${jmj.split("jmj-").join("MJ")}.png" />`);
-        console.log(`<img loading="lazy" id=${jmj} class="new" alt="https://glyphwiki.org/get_preview_glyph.cgi?data=${glyph}"/>`);
+        let jmjc, glyph, type, action, stat, remark;
+        [jmjc, glyph, type, action, stat, remark] = v;
+        let jmj = jmjc.split("[").shift();
+        console.log("<hr>",jmjc);
+        if (jmj.slice(0,4) == "jmj-") {
+            console.log(`<img loading="lazy" src="https://moji.or.jp/mojikibansearch/img/MJ/${jmj.split("jmj-").join("MJ")}.png" />`);
+        } else {
+            console.log(`<img loading="lazy" src="https://glyphwiki.org/glyph/${jmj.split("-var-").shift()}.svg" />`);
+        }
+        if (glyph[0] == "[")
+            console.log(`<img loading="lazy" id=${jmjc} class="new" alt="https://glyphwiki.org/glyph/${glyph.slice(2,-2)}.svg"/>`);
+        else
+            console.log(`<img loading="lazy" id=${jmjc} class="new" alt="https://glyphwiki.org/get_preview_glyph.cgi?data=${glyph}"/>`);
         
         console.log(v.slice(2).join("\t"));
         console.log(diff.find(v => v[0] == jmj));

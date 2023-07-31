@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"></meta>
+<script src="./kage-engine/2d.js"></script>
+<script src="./kage-engine/buhin.js"></script>
+<script src="./kage-engine/curve.js"></script>
+<script src="./kage-engine/kage.js"></script>
+<script src="./kage-engine/kagecd.js"></script>
+<script src="./kage-engine/kagedf.js"></script>
+<script src="./kage-engine/polygon.js"></script>
+<script src="./kage-engine/polygons.js"></script>
+<script>
+const $tag = (tag,$dom) => [...($dom || document).getElementsByTagName(tag)];
+const $c = (name,$dom) => [...($dom || document).getElementsByClassName(name)];
+const $id = (id) => document.getElementById(id);
+const $q = (q) => [...document.querySelectorAll(q)];
+const CGIPATH = "../cgi-bin/gwdump.cgi";
+
+let gdef = {};
+
+const kage_draw = function(q, $img, fill, islocal) {
+    if(!islocal){
+        if (q.indexOf(":") < 0) {
+            $("<img>").appendTo($img);
+            $img.src = ("http://glyphwiki.org/glyph/" + q + ".svg")
+            $img.style.width = "100%";
+            return;
+        }
+        if (!islocal) {
+            $("<img>").appendTo($img).src = ("http://glyphwiki.org/get_preview_glyph.cgi?data=" + q).css("width","100%");
+            return;
+        }
+    }
+    if (q.indexOf(":") < 0) q = "99:0:0:0:0:200:200:" + q.split("[").join("").split("]").join("");
+
+    const draw = (kage) => {
+        let polygons = new Polygons();
+        Object.keys(gdef).map(gname => kage.kBuhin.push(gname, gdef[gname]));
+        kage.makeGlyph(polygons, "sandbox");
+        //console.log(q,kage.getEachStrokes(q));
+
+        $img.innerHTML = (polygons.generateSVG(false));
+        let color = (fill) ? fill : "black"
+        $tag("svg",$img)[0].style.fill = "white";
+    };
+
+    // kageオブジェクトの作成
+    let kage = new Kage();
+    kage.kUseCurve = false;
+    kage.kBuhin.push("sandbox", q);
+
+    // 参照オブジェクトの取得
+    {
+        let agenda = q.split("$").map(row => {
+            let r = row.split(":");
+            return (r[0] == "99") ? r[7] : undefined;
+        }).filter(v => v && !gdef[v]);
+        
+        if (agenda.length == 0)
+            return draw(kage);
+        
+        const req = new XMLHttpRequest();
+        req.open("GET", CGIPATH + `?q=${agenda.join(",")}&rec=1`);
+        req.addEventListener("load", (xml) => {
+            let q = xml.srcElement.response;
+            q = q.split("<JSON>").pop().trim();
+            JSON.parse(q).map(v => {
+                let gname = v[0];
+                let glyph = v[2].replace(/@[0-9]+/g,"");
+                gdef[gname] = glyph;
+            });
+            draw(kage);
+        });
+        req.send();
+    };
+};
+const agendalist = (def) => def.split("\n")
+      .join("$").split("$").map(row => {
+          let r = row.split(":");
+          return (r[0] == "99") ? r[7] : r[0];
+      });
+const ucs2c = function(u) {
+    if (!u) return "〓";
+    let ucs = u.match(/^u([0-9a-f]+)/);
+    return ucs ? String.fromCodePoint(parseInt("0x" + ucs[1])) : "〓";
+};
+
+const agendadump = function() {
+    let def = $id("defglyph").value.trim();
+    let html = agendalist(def).map((v) => {
+        if (v.match(/^[0-9]$/)) return v;
+        if (v.match(/[^\x20-\x7e]/)) {
+            v = "u" + v.codePointAt(0).toString(16);
+        }
+        return "<label><input type=checkbox checked />" + v + "</label>" +
+            "(<a href='https://glyphwiki.org/wiki/" + v + "' target='_blank'>" + ucs2c(v) + "</a>)";
+    });
+    $id("agenda").innerHTML = (html.join(", "));
+};
+window.onload = () => {
+    $id("defglyph").onchange = () => {
+        kage_draw($id("defglyph").value.split("\n").join("$"), $id("preview"), false, true);
+        agendadump();
+    };
+    $id("defglyph").onchange();
+    $id("dump").onclick = agendadump;
+    $id("extract").onclick = () => {
+        //チェックを入れた部品のみ対象
+        let cs = $tag("input", $id("agenda")).map(($c,i) => $c.checked ? i : -1).filter(v => v != -1);
+        if (cs.length == 0) return;
+        let reglyph = $id("defglyph").value.trim().split("\n").join("$").split("$")
+            .map((glyph,n) => {
+                if (cs.indexOf(n) != 0) return glyph;
+                let col = glyph.split(":").map((v,i)=> i==7 ? v : parseInt(v));
+                let kage = new Kage();
+                let p = kage.getEachStrokesOfBuhin(gdef[col[7]],col[3],col[4],col[5],col[6],col[1],col[2],col[9],col[10]);
+                return p.map(row => row.filter(v => v == 0 || v).map(v => parseInt(v)).join(":")).join("$");
+            });
+        $id("defglyph").value = reglyph.join("$").split("$").join("\n");
+        agendadump();
+    };
+};
+</script>
+<style>
+
+  .glyph span {width:50px; height:50px; border: solid gray 1px; padding:0; margin:0; display:block; line-height:20px;}
+  span.dglyph {border-color:red;}
+  span.retaken {border-color:blue;}
+  #ui button {height:50px; width:100px;}
+.reg.retaken {background-color: #bdb;}
+  #previewbox {
+  width:200px; height:200px; border:1px solid gray;
+  position:relative;
+  background-color: #00f;
+}
+  #origin {
+opacity:.5;
+}
+#preview{
+ mix-blend-mode: screen;
+}
+#editorbox {
+  display:inline-block;
+  width:auto;
+  background-color: #efe;
+  border: 1px solid gray;
+  position:sticky;
+  bottom:0;
+  left:0;
+}
+#editorbox button {
+    height:40px;
+    width:140px;
+    //font-size:30px;
+}
+#editorbox #dump {
+    width:50px;
+    font-size:30px;
+}
+
+</style>
+<title>gweditor</title>
+</head>
+
+<body style="width:800px;">
+  <div id="editorbox" style="width:800px;">
+    <div id="info">None</div>
+    <div id="editor" style="display:flex">
+    <div>
+    <textarea id="defglyph" style="width:400px; height:200px; font-size:20px;">
+99:0:0:3:0:197:187:u5927-03:0:0:0
+2:0:7:130:72:105:79:56:84
+1:12:32:56:84:56:162
+2:0:7:24:174:61:163:109:147
+1:2:0:56:119:173:114
+6:0:5:104:82:106:139:154:173:173:174
+1:0:0:53:178:137:178
+      </textarea>
+      <div><span id="agenda"></span><button id="dump">↺</button></div>
+      <button id="save">save</button>as<input id="savename" />
+      <span style="display:none;" id="savedone">savedone</span>
+    </div>
+    <div style="width:150px;">
+        <button id="replace">replace</button>
+        <button id="extract">extract</button>
+        <button id="undo">undo</button><br><br>
+        <button id="draw">draw</button>
+    </div>
+
+
+     <div>
+        <div style="" id="previewbox">
+          <div id="preview" style="width:200px; height:200px;"></div>
+          <div id="origin" style="width:200px; height:200px; top:0; position:absolute; left:0;"></div>
+        
+        </div>
+        <label style="line-height:50px;"><input type="checkbox" id="showorigin" />show origin</label>
+        <button id="official">official</button>
+      </div>
+   </div>
+  <div id="undolist" style="word-break: break-all; width:600px; font-family:monospace; font-size:8px;"></div>
+</div>
+
+</body>
+

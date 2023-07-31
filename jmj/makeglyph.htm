@@ -64,8 +64,23 @@ u8cd3-var-002
 u9010-var-007
 u91c6-03-var-006
 u9b4f-var-002
-u9e7f-var-008`.split("\n").map(name=>{
+u9e7f-var-008
+u20088-01-var-011[𠂈]
+u270f0-var-003[𧃰]
+u28462-var-001[𨑢]
+u2ff4-u26951-u56df-var-003[𡢗]
+u46bb-var-001[䚻]
+u5ee3-var-006[廣]
+u65f2-03-var-001[旲]
+u81fe-07-var-001[臾]
+u22256-var-002[]
+u4e46-var-004[]
+u658a-var-005[]
+u8005-var-003[]
+`.split("\n").map(name=>{
+    //cdp-85dc-var-003[求]
     if(!name) return;
+    name = name.split("[").shift();
     let c = String.fromCodePoint(parseInt(name.split("-").shift().slice(1),16));
     let p = parts.find(v=>v[0]==c);
     if (!p) return;
@@ -73,13 +88,13 @@ u9e7f-var-008`.split("\n").map(name=>{
 });
     //console.log(parts);
     global = glyphs;
-    start = parseInt(start) || 1;
+    start = parseInt(start) || 0;
     location.hash = "#" + start;
 
     //return;
     $id("main").innerHTML = glyphs.slice(start,start+100).map(v => {
         let mj = "MJ" + v.mj;
-        let html = `<div class=left><a>${mj}</a><input><br>`
+        let html = `<div class=left><a>${mj}</a><input>${v.cat}<br>`
         html += `<img class=mj src="https://moji.or.jp/mojikibansearch/img/MJ/${mj}.png" /><img class=new id="${mj}" /><br>`;
         html += v.d.map(g =>
                         `<a href="https://glyphwiki.org/wiki/${g.n}" target="_blank">${g.n}</a><br>`
@@ -130,6 +145,11 @@ u9e7f-var-008`.split("\n").map(name=>{
                    return (lindex < n);
                });
            })(original, lindex);
+           if (!original[pindex]) {
+               $tag("input", $div)[0].value += ":" + $li.innerText.split(":").pop();
+               $tag("input", $div)[0].onchange();
+               return;
+           }
            let cols = original[pindex].split(":");
            cols[7] = ( $c("selected", $parts)[0] || {src:$li.innerText.split(":").pop()} ).src.split("/").pop().split(".").shift();
            original[pindex] = cols.join(":");
@@ -194,12 +214,21 @@ u9e7f-var-008`.split("\n").map(name=>{
         navigator.clipboard.writeText($id("checklist").value);
     };
 }
-window.onload = () => {
-    $id("checklist").innerText = localStorage.getItem("check");
-    $id("page").placeholder = "(0 to " + glyphs.length + ")";
-    $id("draw").onclick = () => {
-        draw_page($id("page").value);
-    };
+  window.onload = () => {
+      glyphs = $id("undone").innerText.split("\n").map(v => {
+          let jmj, cat;
+          [jmj, cat] = v.split("#");
+          let g = glyphs.find(v=>v.mj==jmj.slice(4));
+          if (!g) return console.log(jmj);
+          g.cat = cat;
+          return g;
+      }).filter(v=>v);
+
+      $id("checklist").innerText = localStorage.getItem("check");
+      $id("page").placeholder = "(0 to " + glyphs.length + ")";
+      $id("draw").onclick = () => {
+          draw_page($id("page").value);
+      };
 }
 </script>
 <body>
@@ -209,7 +238,7 @@ window.onload = () => {
     <div id="freq" class=hide>
         ["aj1-13955","aj1-14111","gt-66932","j83-5739","j83-6663","jmj-000075","jmj-000536","jmj-001915","jmj-006626","jmj-006719","jmj-007497","jmj-007636","jmj-010159","jmj-010850","jmj-011074","jmj-011890","jmj-011891","jmj-012101","jmj-017540","jmj-020009","jmj-023305","jmj-024651","jmj-024975","jmj-026392","jmj-026575","jmj-030295","jmj-030297","jmj-057315","koseki-056610","koseki-181800","koseki-319840","koseki-346080","koseki-365270","nyukan-f115","u20018-g","u20602-jv","u20dce-var-001","u21569-var-004","u2163a-var-001","u21a25-var-002","u21e01-var-001","u22281-var-001","u2233f-var-001","u223da-var-002","u229dc-var-001@1","u22f95-var-002","u241fe-03@6","u24514-var-001","u2585d-jv","u25931","u25e98-var-001","u26407-jv","u264d4-02","u2652e-var-003","u2696f-03-var-001","u27e86-jv","u28a88-t","u2950a-jv","u2b739-jv","u2bda7-var-003","u2d627-var-001","u2e0b1-gv","u2e4db-j","u34c1-03-var-002","u34de-03","u353b-g","u361d-g","u3687-02-var-003","u3687-var-003","u3687-var-004","u378b-jv","u378b-var-002","u3ac4-02-var-002","u3ac4-02-var-003","u3b05-02-var-002","u3b05-var-003","u3b9a-02-var-001","u3c2f-jv","u3d06-t","u3f32-jv","u4093-var-001","u4165-ue0101","u41a4-jv","u458f-var-002","u4592-01-var-001","u49a7-var-001","u49a8-jv","u4bc9-jv","u4e08-02","u4e0d-02-var-001","u4e0d-g","u4e0d-g01","u4e0d-g02","u4e0d-g03","u4e10-var-001","u4e15-01-var-002","u4e15-g","u4e15-g02","u4e1e-03-var-001","u4e38-02-var-001","u4e42-g","u4e4e-j","u4e4f-var-002","u4e82-ue0101","u4e9f-g","u4ea4-j","u4ee5-var-001","u4f59-02","u4faf-g","u4faf-t01","u4fca-var-001","u4fdd-k","u4fde@5","u50d5-02","u5140-04-var-002","u5141-var-001","u5143-g","u5144-g02","u5145-02-var-002","u5145-var-004","u5146-02","u5146-02@7","u5149-02-var-004","u5149-g02","u5149-g05","u5149-k","u5149-t","u5149-t02","u514c-02-var-002","u514c-g02","u514c-var-002","u514d-02-var-002","u514d-02-var-006","u514d-var-008","u5152-g","u5152-g02","u5152-var-002","u5154-01-var-002","u5154-var-003","u5154-var-006","u516a-01-var-003","u517c-01-var-002","u517c-02-var-004","u517c-var-001","u518f-k","u51a5-var-001","u51fd-t","u52f3-g","u5317-03","u5339-ue0103","u5340-02-var-002","u5343-01-var-001","u5347-g","u5357-02-var-001","u5357-var-001","u5374-02-var-001","u53bb-01-var-001","u53bb-02-var-001","u53bb-var-001","u53c3-var-001","u53c3-var-004","u53c3-var-005","u53c5-var-002","u53c8-01-var-001","u53c8-02","u53c8-02-var-002","u53c8-04","u53c8-j","u53d0-ue0101","u53d2-03-var-002","u53d4-03-var-001","u53d4-08-var-001","u53d4-08-var-002","u53d4-var-001","u53d4-var-003","u53d6-j","u53d6-var-004","u53d6-var-013","u53df-02-var-001","u53e5-j@2","u53f2-j","u5408-01","u540e-02@4","u541d-02-var-001","u5426-g","u542b-01-var-002","u542b-ue0100","u5433-02-var-001","u5433-var-004","u5446-var-001","u5449-02-var-001","u54a0-var-001","u54a8-j","u557b-var-002","u56da-g","u56e0-g","u56e0-var-001","u56f0-j","u5705-g02","u5725-01","u5725-03-var-002","u5728-var-002","u5774-02-var-001","u5794-01-var-001","u57f6-k","u57f6-var-003","u5802-g02","u5802-j","u582f-g","u582f-g02","u582f-t","u5875-var-001","u5876-var-001","u58fd-var-003","u590a-t04","u590b-01-var-004","u590b-02-var-002","u590b-02-var-005","u590b-02-var-009","u590b-var-004","u590b-var-005","u590c-02-var-002","u590c-02-var-003","u590d-02-var-002","u590d-02-var-004","u590d-var-003","u590f-var-001","u5929-g","u594f-var-004","u5951-01-var-003@1","u5951-ue0102","u5951-ue0104","u595a-01-var-002","u5960-var-003","u5967-07-var-001","u5967-j","u59d4-01-var-001","u5a01-var-001","u5a04","u5a41-g01","u5a41-k01","u5b58-g","u5b58-var-001","u5b5d-var-001","u5bb3-08-var-004","u5bb3-var-006","u5beb-var-001","u5bec-02-var-001","u5bec-var-003","u5bfa-var-003","u5c02-var-004","u5c03-02-var-005","u5c04-j","u5c08-var-002","u5c0a-var-005","u5c0a-var-006","u5c0a-var-007","u5c14-02-var-001","u5c17-01-var-001","u5c17-var-002","u5c22-05-var-002","u5c5b-var-001","u5c6c-var-002","u5c70-07-var-001","u5dc2-var-003","u5dcb-var-002","u5de8-j","u5dee-j","u5e1a-02-var-001","u5e1a-var-002","u5e1b-g02","u5e1b-t","u5e1b-var-001","u5e1d-08-var-001","u5e1d-var-001","u5e1d-var-002","u5e36-g","u5e55-var-002","u5e72@3","u5e77-var-002","u5e7e-02-var-003","u5ec9-02-var-002","u5ec9-var-002","u5ecc-var-002","u5ee2-var-002","u5ef6-02-var-001","u5ef6-04","u5ef7-j","u5ef7-t","u5ef7-v","u5efa-j","u5f01-var-001","u5f1c-05@4","u5f37-j","u5f3a-var-001","u5f54-var-003","u5f55-02-var-001","u5f57-j","u5f99-var-001","u5fa9-var-003","u5fa9-var-004","u5fae-var-003@1","u5fdd-var-001","u602f-var-001","u6089-g","u60a4-g","u611b-02-var-001","u611b-ue0101","u611b-var-001","u611f-02-var-002","u616e-var-002","u6182-01-var-002","u6182-02-var-001","u61b2-ue0105","u620d-var-002","u620e-j","u6210-j","u621a-02-var-001","u621a-02-var-002","u621a-t","u622a@2","u6231-var-001","u6232-02-var-001","u6239-j","u624b-01-var-007","u627f-j","u6460-k","u64e7-var-003","u6536-k","u6556-02-var-003","u6556-03-var-003","u6556-var-005","u656b-var-002","u656b-var-003","u6577-02-var-002","u657b-02","u6587-01-var-001","u6587-03","u65b9-01-var-001","u65b9-02-var-002","u65b9-04-var-001","u65b9-var-001","u65bc-02-var-002","u65bc-02-var-003","u65bc-var-001","u65bc-var-003","u65bd-k","u65bf-var-001","u65c1-02-var-002","u65c1-02-var-003","u65c1-ue0102","u65cb-02-var-001","u65cb-var-001","u65cf-02-var-001","u65cf-var-001","u65e0-g","u65e1-var-003","u65e3-var-001","u65fb-var-001","u6607-j","u6613-01-var-001","u6613-02-var-001","u6613-var-001","u66b4-var-001","u66f6-g","u66f7-01-var-004","u66f7-02-var-003","u66f7-02-var-007","u66f7-02-var-009","u66f7-var-004","u66f7-var-005","u66fc-ue0101","u6700-var-003","u6701-j","u6772-var-001","u67bc-02-var-001","u687c-g","u687c-var-002","u68e0-02-var-001","u699c-var-001","u6b20-02-var-002","u6b20-02-var-002@3","u6b20-02-var-011","u6b20-k","u6b2e-jv","u6b32-j","u6b46-j","u6b47-var-004","u6b54-var-001","u6b65-01","u6b65-02-var-001","u6b65-var-001","u6b69-var-002","u6b77@7","u6b78-var-003","u6b7b-g","u6c42-01-var-002","u6dd1-var-001","u6de9-var-001","u6e20-j","u6ec2-ue0102","u6ec2-var-001","u7070-var-002","u708e-02-var-001","u708e-var-004","u715e-02-var-001","u71ee-j","u722d-02-var-004","u723b-g","u723b-t02","u727d-var-002","u730b-var-002","u74b0-var-001","u74dc-02","u74dc-02-var-002","u74dc-04","u74dc-j","u74e6-02-var-004","u74e6-02-var-005","u7504-ue0102","u755f-02-var-003","u7562-var-011","u7562-var-013","u7570-var-002","u7570-var-003","u758f-var-003","u7676-03-var-003","u7678-02-var-002","u7678-02-var-003","u7678-var-001","u7679-02-var-002","u767a-02-var-001","u767b-01-var-003","u767b-04-var-001","u767b-08-var-001","u767c-02-var-002","u7683-02-var-001","u76ca-01-var-002","u76ca-var-004","u76cd-j","u76e4-j","u76e7-var-001","u76f4-var-003","u76fe-var-002","u7701-var-001","u7758-02-var-003","u777d-var-001","u77de-j","u77de-var-001","u793a-j","u7962-ue0101","u79b9-var-001","u79bb-02-var-003","u79bb-02-var-005","u79bd-02-var-003","u79be-04-var-003","u79c0-02@7","u79e6-02","u79e6-k","u7a74-03","u7a7a-var-004","u7a7e-j","u7a81-ue0101","u7a86-j","u7a92-var-006","u7aae","u7adf-01","u7adf-02","u7b97-03-var-001","u7dbf-var-001","u7e2b-ue0103","u7f54-j","u7f59-02-var-001","u7f59-var-002","u7f6a-j","u7f8c-02-var-002","u7fb2-j","u7fcf-01","u7fd2-ue0101","u7fe3-j","u7ff3-j","u8001-04-var-003","u8001-h03","u8001-var-001","u8006-02-var-001","u8033-02","u8033-j","u8033-var-002","u810a-var-001","u81ec-var-001","u81f3-01","u81f3-02-var-003","u8207-03-var-001","u8207-var-001","u821f-01@4","u8279-k03@4","u827e-var-001","u82b3-02-var-002","u83ab-03-var-004","u83ab-03-var-006","u83ab-var-001","u83d0-02-var-002","u83ef-var-002","u83ef-var-005","u83ef-var-018","u8449-02-var-003","u8449-02-var-005","u845b-02-var-001","u845b-ue0108","u84cb-j","u84cb-k","u8511-ue0104","u8511-v02","u85a6-ue0102","u85a6-var-001","u85a6-var-002","u85dd-var-003","u85dd-var-004","u864d-05-var-007","u864d-10-var-008","u864e-01-var-001","u864e-02-var-001","u864e-05-var-002","u864e-var-005","u8650-ue0102","u8650-var-001","u8652-02-var-002","u8652-var-001","u8654-var-001","u8656-02-var-002","u8656-var-001","u8658-01-var-001","u8658-01-var-003","u8658-var-001","u865b-01-var-001","u865b-02-var-001","u8689-01-var-001","u8700-02-var-001","u8700-07-var-002","u8700-var-001","u8863-02-var-001","u886e-jv","u8881-02-var-001","u8881-07-var-002","u889e-02-var-002","u889e-var-002","u897f-g01","u898b-01-var-003","u898b-02-var-003","u898b-04-var-001","u898b-g","u898b-g02","u898b-g04","u898b-h02","u898f-g","u8993-02-var-001","u89a7-02-var-001","u89aa-var-002","u89aa-var-003","u89bd-02-var-001","u8c55-t","u8c55-var-005","u8c56-var-001","u8c66-var-002","u8c66-var-003","u8c8c-g","u8cc1-02-var-001","u8d66-k","u8d70-02-var-001","u8d70-v05","u8d70-v10","u8fa1-05-var-001","u8fb0-02","u8fb0-04-var-001","u8fb0-j01","u8ff7-k","u901f-k","u9020-ue0101","u9022-ue0104","u905d-var-002","u905d-var-005","u9060-ue0102","u912d-02-var-001","u9149-01-var-010","u9149-04-var-004","u9149-g01","u914b-ue0100","u914b-var-010","u914d-g","u9153-01-var-002","u91c6-03-var-001","u9577-04-var-001","u95cc-g","u961c-g","u9670-j","u9675-ue0102","u96e2-var-002","u96e2-var-003","u96e8-03","u96f6-02-var-001","u96f6-var-001","u9700-j","u975e-02-var-001","u975e-var-001","u9761-var-001","u97cb-08-var-004","u97cb-08-var-009","u97cb-08-var-010","u97cb-08-var-011","u97cb-08-var-021","u9801-02","u983b-j","u983b-var-001","u9999-var-001","u9b32-02-var-002","u9b32-k","u9b32-var-005","u9b3c-02-var-005","u9b3c-05-var-004","u9b3c-var-002","u9b4f-var-001","u9e7f-01-var-004","u9e7f-01-var-005","u9e7f-03-var-001","u9e7f-05-var-002","u9e7f-10-var-001","u9e7f-var-002","u9e83-var-002","u9e8b-var-002","u9e97-var-003","u9ea6-05-var-001","u9ece-var-001","u9efd-g","uf91f-k","uf936-var-002","uf936-var-003","ufa17-01@7","ufa1e","ufa5e-03","zihai-001106","zihai-003657"];</div>
 <script>
-const glyphs = [
+let glyphs = [
 {"mj":"003406","d":[{"n":"koseki-297610","gly":"99:0:0:0:3:200:114:u7af9-03:0:0:0$99:0:0:0:47:200:193:u26951-03:0:0:0$2:0:7:82:115:60:142:17:158$1:2:2:68:131:175:131$2:22:4:175:131:175:163:162:181$2:7:8:54:145:55:169:36:177$2:7:8:73:144:84:160:80:172$2:7:8:95:143:111:152:115:167$2:7:8:120:140:139:147:146:160","sum":["竹:u7af9-03","𦥑:u26951-03",false,false,false,false,false,false,false]},{"n":"u4263","gly":"99:0:0:0:5:200:127:u7af9-03:0:0:0$99:0:0:1:47:203:195:u8204:0:0:0","sum":["竹:u7af9-03","舄:u8204"]}]} ,
 {"mj":"003422","d":[{"n":"u4274","gly":"99:0:0:0:6:200:121:u7af9-03-var-001$99:0:0:0:40:200:197:u8944","sum":["竹:u7af9-03-var-001","襄:u8944"]},{"n":"toki-01070250","gly":"99:0:0:0:3:200:156:u7af9-03-var-001:0:0:0$99:0:0:0:42:200:196:u2ff3-u4ea0-u4e1a-u27607:0:0:0","sum":["竹:u7af9-03-var-001","〓:u2ff3-u4ea0-u4e1a-u27607"]},{"n":"toki-01070510","gly":"99:0:0:0:6:200:125:u7af9-03-var-001$99:0:0:7:34:196:199:u8944-itaiji-001@6","sum":["竹:u7af9-03-var-001","襄:u8944-itaiji-001@6"]},{"n":"toki-01070570","gly":"99:0:0:0:4:200:127:u7af9-03$99:0:0:5:37:197:197:u8944-itaiji-004@2","sum":["竹:u7af9-03","襄:u8944-itaiji-004@2"]}]} ,
 {"mj":"003748","d":[{"n":"u43bb-jv","gly":"99:0:0:4:0:149:200:u8033-01$99:0:0:-15:0:203:200:u5468-k02","sum":["耳:u8033-01","周:u5468-k02"]},{"n":"dkw-29098","gly":"99:0:0:4:0:178:200:u8033-01-var-001@1$99:0:0:-15:0:203:200:u5468-k02","sum":["耳:u8033-01-var-001@1","周:u5468-k02"]},{"n":"u43bb","gly":"99:0:0:4:0:149:200:u8033-01$99:0:0:-15:0:203:200:u5468-k02","sum":["耳:u8033-01","周:u5468-k02"]}]} ,
@@ -3976,4 +4005,25 @@ const glyphs = [
 𮭱 ["jmj-059251","jmj-059252","extf-08382","koseki-538600","u2eb71","u2eb71-j","u2eb71-ue0100","u2eb71-ue0101","u2eb71-var-001"]
 𮮐 ["jmj-059265","extf-08416","koseki-542920","u2eb90","u2eb90-01-var-001","u2eb90-j","zihai-108140"]
 𰥍 ["u3094d-03","u3094d-03-var-001"]
+</div>
+<div id=undone class=hide>
+jmj-003406
+jmj-017106
+jmj-032494
+jmj-042956
+jmj-046002
+jmj-046025
+jmj-047704
+jmj-048537
+jmj-052958
+jmj-055078
+jmj-056485
+jmj-056499
+jmj-056504
+jmj-056515
+jmj-056518
+jmj-056519
+jmj-056531
+jmj-056541
+jmj-056546
 </div>

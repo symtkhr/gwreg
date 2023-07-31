@@ -73,7 +73,7 @@ function Kage(size){
           ]);
       } else {
         var buhin = this.kBuhin.search(columns[7]);
-        if(buhin != ""){
+          if(buhin != ""){
           strokesArray = strokesArray.concat(this.getEachStrokesOfBuhin(buhin,
                                                   Math.floor(columns[3]),
                                                   Math.floor(columns[4]),

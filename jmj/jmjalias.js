@@ -15,9 +15,9 @@ if (update) {
     execSync(`grep " jmj-" dump_newest_only.txt |cut -d" " -f2 > gwregdone.txt`);
 }
 let reg = getfile("gwregdone.txt").split("\n").filter(v=>v);
-
+let range = process.argv.slice(2).find(v => v[0] != "-");
 // find unregistered jmj
-execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30 | grep ${process.argv[2]} > tmp.mji.dat`)
+execSync(`cut ../tables/mji.00601.csv -d, -f2,3,4,6,8,30` + (range ? ` | grep ${range}` : "") + ` > tmp.mji.dat`)
 let jmjs = getfile("tmp.mji.dat").split("\n").filter(v=>v).map((row,i) => {
         let cell = row.split(",");
         if (reg.indexOf("jmj-"+cell[1].slice(2))!=-1) return;
